@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+// Include the SurfCharacter namespace
+using Fragsurf.Movement;
 
 public class GrappleRight : MonoBehaviour
 {
@@ -13,11 +15,11 @@ public class GrappleRight : MonoBehaviour
 
     [Header("Grapple Behavior Settings")]
     [Tooltip("If an object’s layer is in this mask, the grapple will attach to its center instead of the hit point.")]
-    public LayerMask centerGrappleLayer; // <-- New layer mask for center grappling
+    public LayerMask centerGrappleLayer;
 
     [Header("References")]
-    public Camera playerCamera;
-    public KeyCode releaseKey = KeyCode.R;
+    // Instead of a Camera reference, we use SurfCharacter
+    public SurfCharacter surfCharacter;
 
     [Header("Debug Settings")]
     public bool enableDebug = true;
@@ -27,6 +29,19 @@ public class GrappleRight : MonoBehaviour
     private List<GrapplePair> activeGrapples = new List<GrapplePair>();
     private RaycastHit firstHit;
     private bool isFirstTargetSelected = false;
+
+    private void Awake()
+    {
+        // Auto-assign the SurfCharacter if not set.
+        if (surfCharacter == null)
+        {
+            surfCharacter = GetComponent<SurfCharacter>();
+            if (surfCharacter == null)
+            {
+                Debug.LogError("SurfCharacter not found on the GameObject. Please assign a SurfCharacter reference.");
+            }
+        }
+    }
 
     void Update()
     {
@@ -39,31 +54,38 @@ public class GrappleRight : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(1))
         {
-            if (Physics.Raycast(playerCamera.transform.position,
-                              playerCamera.transform.forward,
-                              out RaycastHit hit,
-                              maxGrappleDistance,
-                              grappleLayer))
+            if (surfCharacter == null || surfCharacter.viewTransform == null)
+            {
+                Debug.LogError("SurfCharacter or its viewTransform is not assigned!");
+                return;
+            }
+
+            // Use the SurfCharacter's viewTransform for the ray origin and direction.
+            Vector3 rayOrigin = surfCharacter.viewTransform.position;
+            Vector3 rayDirection = surfCharacter.viewTransform.forward;
+
+            if (Physics.Raycast(rayOrigin, rayDirection, out RaycastHit hit, maxGrappleDistance, grappleLayer))
             {
                 if (enableDebug)
                 {
                     Debug.Log("Raycast hit: " + hit.collider.name);
-                    Debug.DrawRay(playerCamera.transform.position,
-                                playerCamera.transform.forward * hit.distance,
-                                validTargetColor, 0.1f);
+                    Debug.DrawRay(rayOrigin, rayDirection * hit.distance, validTargetColor, 0.1f);
                 }
 
+                // Only allow grappling to dynamic (non-kinematic) rigidbodies.
                 if (hit.rigidbody != null && !hit.rigidbody.isKinematic)
                 {
                     if (!isFirstTargetSelected)
                     {
                         firstHit = hit;
                         isFirstTargetSelected = true;
-                        if (enableDebug) Debug.Log($"FIRST TARGET SET: {hit.collider.name} at {hit.point}");
+                        if (enableDebug)
+                            Debug.Log($"FIRST TARGET SET: {hit.collider.name} at {hit.point}");
                     }
                     else
                     {
-                        if (enableDebug) Debug.Log($"CREATING CONNECTION BETWEEN: {firstHit.collider.name} and {hit.collider.name}");
+                        if (enableDebug)
+                            Debug.Log($"CREATING CONNECTION BETWEEN: {firstHit.collider.name} and {hit.collider.name}");
                         CreateGrappleConnection(firstHit, hit);
                         isFirstTargetSelected = false;
                     }
@@ -79,9 +101,7 @@ public class GrappleRight : MonoBehaviour
             {
                 if (enableDebug)
                 {
-                    Debug.DrawRay(playerCamera.transform.position,
-                                playerCamera.transform.forward * maxGrappleDistance,
-                                invalidTargetColor, 0.1f);
+                    Debug.DrawRay(rayOrigin, rayDirection * maxGrappleDistance, invalidTargetColor, 0.1f);
 
                     if (isFirstTargetSelected)
                     {
@@ -99,22 +119,23 @@ public class GrappleRight : MonoBehaviour
 
     void CreateGrappleConnection(RaycastHit startHit, RaycastHit endHit)
     {
+        // Add a SpringJoint to the first hit object.
         SpringJoint spring = startHit.rigidbody.gameObject.AddComponent<SpringJoint>();
         spring.connectedBody = endHit.rigidbody;
         spring.spring = springForce;
         spring.damper = damperForce;
         spring.autoConfigureConnectedAnchor = false;
 
-        // CRITICAL FIX: Enable collisions between connected bodies
-        spring.enableCollision = true; // ← This line fixes the collision issue
+        // Enable collisions between the connected bodies.
+        spring.enableCollision = true;
 
-        // Determine the local anchor point for the first object
+        // Determine the local anchor point on the first object.
         Vector3 localHitPointA;
         if ((centerGrappleLayer.value & (1 << startHit.collider.gameObject.layer)) != 0)
         {
-            // Use the object's center (in local space, that's (0,0,0))
             localHitPointA = Vector3.zero;
-            if (enableDebug) Debug.Log($"Using center for {startHit.collider.name}");
+            if (enableDebug)
+                Debug.Log($"Using center for {startHit.collider.name}");
         }
         else
         {
@@ -122,13 +143,13 @@ public class GrappleRight : MonoBehaviour
         }
         spring.anchor = localHitPointA;
 
-        // Determine the local anchor point for the second object
+        // Determine the local anchor point on the second object.
         Vector3 localHitPointB;
         if ((centerGrappleLayer.value & (1 << endHit.collider.gameObject.layer)) != 0)
         {
-            // Use the object's center
             localHitPointB = Vector3.zero;
-            if (enableDebug) Debug.Log($"Using center for {endHit.collider.name}");
+            if (enableDebug)
+                Debug.Log($"Using center for {endHit.collider.name}");
         }
         else
         {
@@ -136,7 +157,7 @@ public class GrappleRight : MonoBehaviour
         }
         spring.connectedAnchor = localHitPointB;
 
-        // Create a line renderer to visualize the grapple
+        // Create and configure a LineRenderer to visualize the grapple.
         LineRenderer lr = new GameObject("GrappleLine").AddComponent<LineRenderer>();
         lr.positionCount = 2;
         lr.material = lineMaterial;
@@ -153,21 +174,23 @@ public class GrappleRight : MonoBehaviour
         if (enableDebug)
         {
             Debug.Log($"New Grapple Created!\n" +
-                    $"Object A: {startHit.collider.name} (Mass: {startHit.rigidbody.mass})\n" +
-                    $"Object B: {endHit.collider.name} (Mass: {endHit.rigidbody.mass})\n" +
-                    $"Anchor Points:\nA: {spring.anchor}\nB: {spring.connectedAnchor}");
+                      $"Object A: {startHit.collider.name} (Mass: {startHit.rigidbody.mass})\n" +
+                      $"Object B: {endHit.collider.name} (Mass: {endHit.rigidbody.mass})\n" +
+                      $"Anchor Points:\nA: {spring.anchor}\nB: {spring.connectedAnchor}");
         }
     }
 
     void HandleGrappleRelease()
     {
-        if (Input.GetKeyDown(releaseKey))
+        if (Input.GetKeyDown(KeyCode.R))
         {
-            if (enableDebug) Debug.Log($"Releasing all ({activeGrapples.Count}) grapples");
+            if (enableDebug)
+                Debug.Log($"Releasing all ({activeGrapples.Count}) grapples");
 
             foreach (GrapplePair pair in activeGrapples)
             {
-                if (enableDebug) Debug.Log($"Removing connection: {pair.objectA.name} <-> {pair.objectB.name}");
+                if (enableDebug)
+                    Debug.Log($"Removing connection: {pair.objectA.name} <-> {pair.objectB.name}");
 
                 if (pair.springJoint != null)
                     Destroy(pair.springJoint);
@@ -226,6 +249,7 @@ public class GrappleRight : MonoBehaviour
         }
     }
 
+    // Helper class to store grapple connections.
     private class GrapplePair
     {
         public Rigidbody objectA;
