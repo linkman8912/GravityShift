@@ -122,6 +122,11 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!20 &24453591 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 5467285083954485883, guid: a840589249729984398df665ca6e2508, type: 3}
+  m_PrefabInstance: {fileID: 1319735965}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &45187092
 GameObject:
   m_ObjectHideFlags: 0
@@ -1446,6 +1451,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5467285084242854813, guid: a840589249729984398df665ca6e2508, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1319735970}
+    - targetCorrespondingSourceObject: {fileID: 5467285084242854813, guid: a840589249729984398df665ca6e2508, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1319735972}
   m_SourcePrefab: {fileID: 100100000, guid: a840589249729984398df665ca6e2508, type: 3}
 --- !u!114 &1319735966 stripped
 MonoBehaviour:
@@ -1477,14 +1485,37 @@ MonoBehaviour:
   wallJumpCooldown: 0.5
   airStrafeLockDuration: 0.3
   wallRunDuration: 2
-  wallRunSpeed: 15
   wallRunGravityReduction: 0.5
   minWallRunInput: 0.1
+  minWallRunSpeed: 8
+  wallRunSpeedBonusMultiplier: 1
   cameraLeanAngle: 15
   cameraLeanSpeed: 5
   wallJumpMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &1319735972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1110865548}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7803ba0654d7805d0aa5ed50961fff96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grappleKey: 323
+  pullKey: 113
+  cancelKey: 101
+  maxGrappleDistance: 50
+  pullSpeed: 10
+  minRopeLength: 2
+  grappleLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  hookCamera: {fileID: 24453591}
 --- !u!1 &1444534307
 GameObject:
   m_ObjectHideFlags: 0
