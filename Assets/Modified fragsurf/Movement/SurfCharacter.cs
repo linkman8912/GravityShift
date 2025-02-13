@@ -401,19 +401,17 @@ namespace Fragsurf.Movement
             // _moveData.horizontalAxis = Input.GetAxisRaw("Horizontal");
 
             // add a mechanism to stop the player from airstrafing
-
-            if (disableAirStrafe)
-            {
-                // When air control is locked, ignore horizontal/vertical input.
-                _moveData.verticalAxis = 0f;
-                _moveData.horizontalAxis = 0f;
+            
+            if(disableAirStrafe) {
+              // When air control is locked, ignore horizontal/vertical input.
+              _moveData.verticalAxis = 0f;
+              _moveData.horizontalAxis = 0f;
             }
-            else
-            {
-                _moveData.verticalAxis = Input.GetAxisRaw("Vertical");
-                _moveData.horizontalAxis = Input.GetAxisRaw("Horizontal");
+            else {
+              _moveData.verticalAxis = Input.GetAxisRaw("Vertical");
+              _moveData.horizontalAxis = Input.GetAxisRaw("Horizontal");
             }
-
+            
             _moveData.sprinting = Input.GetButton("Sprint");
 
             if (Input.GetButtonDown("Crouch"))
