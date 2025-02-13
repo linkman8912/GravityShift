@@ -1476,6 +1476,12 @@ MonoBehaviour:
   wallJumpUpForce: 7
   wallJumpCooldown: 0.5
   airStrafeLockDuration: 0.3
+  wallRunDuration: 2
+  wallRunSpeed: 15
+  wallRunGravityReduction: 0.5
+  minWallRunInput: 0.1
+  cameraLeanAngle: 15
+  cameraLeanSpeed: 5
   wallJumpMask:
     serializedVersion: 2
     m_Bits: 4294967295

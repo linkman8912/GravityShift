@@ -1,9 +1,9 @@
 using UnityEngine;
 using System.Collections;
-using Fragsurf.Movement;  // Ensure this namespace is referenced so SurfCharacter is known
+using Fragsurf.Movement;  // Needed for SurfCharacter
 
 [RequireComponent(typeof(SurfCharacter))]
-public class WallJump : MonoBehaviour
+public class WallJumpAndRun : MonoBehaviour
 {
     [Header("Wall Jump Settings")]
     [Tooltip("Distance to check for a wall.")]
@@ -19,59 +19,154 @@ public class WallJump : MonoBehaviour
     public float wallJumpUpForce = 7f;
 
     [Tooltip("Cooldown time (in seconds) between wall jumps.")]
-    public float wallJumpCooldown = 0.3f;
+    public float wallJumpCooldown = 0.5f;
 
     [Tooltip("Duration during which air control is disabled after a wall jump.")]
     public float airStrafeLockDuration = 0.3f;
 
+    [Header("Wall Run Settings")]
+    [Tooltip("Maximum duration for a wall run.")]
+    public float wallRunDuration = 2f;
+
+    [Tooltip("Speed during a wall run.")]
+    public float wallRunSpeed = 8f;
+
+    [Tooltip("Factor to reduce gravity during a wall run (0 = no gravity, 1 = full gravity).")]
+    public float wallRunGravityReduction = 0.5f;
+
+    [Tooltip("Minimum vertical input to initiate a wall run.")]
+    public float minWallRunInput = 0.1f;
+
+    [Header("Camera Lean Settings")]
+    [Tooltip("Maximum angle (in degrees) that the camera will lean.")]
+    public float cameraLeanAngle = 15f;
+
+    [Tooltip("Speed at which the camera lean interpolates.")]
+    public float cameraLeanSpeed = 5f;
+
+    [Header("Layer Mask")]
     [Tooltip("Layers that count as walls.")]
     public LayerMask wallJumpMask = ~0; // All layers by default
 
     private SurfCharacter _surfCharacter;
     private float _lastWallJumpTime = -Mathf.Infinity;
 
+    // Wall run state variables
+    private bool isWallRunning = false;
+    private float wallRunTimer = 0f;
+    private Vector3 wallRunDirection = Vector3.zero;
+    private Vector3 currentWallNormal = Vector3.zero;
+
     private void Start()
     {
         _surfCharacter = GetComponent<SurfCharacter>();
         if (_surfCharacter == null)
         {
-            Debug.LogError("WallJump requires a SurfCharacter component on the same GameObject.");
+            Debug.LogError("WallJumpAndRun requires a SurfCharacter component on the same GameObject.");
         }
     }
 
     private void Update()
     {
-        // If the jump button is pressed and we're off cooldown...
+        // --- WALL JUMP LOGIC ---
+        // When Jump is pressed (and off cooldown) while airborne and near a wall,
+        // perform a wall jump that applies a fixed upward force plus a fixed side force.
         if (Input.GetButtonDown("Jump") && Time.time >= _lastWallJumpTime + wallJumpCooldown)
         {
-            // Only attempt a wall jump if the player is airborne.
             if (!IsGrounded())
             {
                 Vector3 wallNormal;
                 if (CheckForWall(out wallNormal))
                 {
-                    // Determine the lateral impulse based solely on the player's side.
-                    // If the dot between the wall normal and the player's right is positive,
-                    // the wall is on the left so we jump to the right; otherwise, jump to the left.
+                    // Determine lateral force: if the dot between the wall normal and player's right is positive,
+                    // then the wall is on the left, so apply a side force along the player's right.
                     float dot = Vector3.Dot(wallNormal, transform.right);
                     Vector3 lateralImpulse = (dot > 0f ? transform.right : -transform.right) * wallJumpHorizontalForce;
-
-                    // Fixed upward impulse.
                     Vector3 upwardImpulse = Vector3.up * wallJumpUpForce;
-
-                    // Final jump velocity: upward plus lateral.
                     Vector3 jumpVelocity = upwardImpulse + lateralImpulse;
 
-                    // Apply the jump velocity.
                     _surfCharacter.moveData.velocity = jumpVelocity;
                     _surfCharacter.moveData.wishJump = false;
-
-                    // Optionally, lock air control for a short duration.
                     StartCoroutine(LockAirStrafeRoutine());
-
                     _lastWallJumpTime = Time.time;
+
+                    // Cancel any active wall run.
+                    isWallRunning = false;
+                    return;
                 }
             }
+        }
+
+        // --- WALL RUN LOGIC ---
+        // If airborne and pressing forward, check for a wall to initiate a wall run.
+        if (!IsGrounded() && Input.GetAxis("Vertical") > minWallRunInput)
+        {
+            Vector3 detectedWallNormal;
+            if (CheckForWall(out detectedWallNormal))
+            {
+                if (!isWallRunning)
+                {
+                    // Begin wall run.
+                    isWallRunning = true;
+                    wallRunTimer = wallRunDuration;
+                    currentWallNormal = detectedWallNormal;
+                    // Calculate the wall run direction as the tangent to the wall.
+                    Vector3 candidate = Vector3.Cross(currentWallNormal, Vector3.up);
+                    if (Vector3.Dot(candidate, transform.forward) < 0)
+                    {
+                        candidate = -candidate;
+                    }
+                    wallRunDirection = candidate.normalized;
+                }
+            }
+            else
+            {
+                isWallRunning = false;
+            }
+        }
+        else
+        {
+            isWallRunning = false;
+        }
+
+        // If wall running, update the timer and override movement.
+        if (isWallRunning)
+        {
+            wallRunTimer -= Time.deltaTime;
+            if (wallRunTimer <= 0f)
+            {
+                isWallRunning = false;
+            }
+            else
+            {
+                // Force a constant horizontal speed along the wall-run direction.
+                Vector3 currentVel = _surfCharacter.moveData.velocity;
+                float preservedUpward = currentVel.y;
+                _surfCharacter.moveData.velocity = wallRunDirection * wallRunSpeed + Vector3.up * (preservedUpward * wallRunGravityReduction);
+            }
+        }
+
+        // --- CAMERA LEAN LOGIC ---
+        // When wall running, lean the camera toward the wall.
+        if (_surfCharacter.viewTransform != null)
+        {
+            float targetLean = 0f;
+            if (isWallRunning)
+            {
+                // Determine which side the wall is on relative to the player.
+                // If dot > 0, the wall is on the left so lean left (negative angle),
+                // otherwise lean right.
+                float dot = Vector3.Dot(currentWallNormal, transform.right);
+                targetLean = (dot > 0f) ? -cameraLeanAngle : cameraLeanAngle;
+            }
+            // Smoothly interpolate the camera's z-axis (roll) toward the target lean.
+            Vector3 camEuler = _surfCharacter.viewTransform.localEulerAngles;
+            float currentLean = camEuler.z;
+            if (currentLean > 180f)
+                currentLean -= 360f; // Convert to -180...180 range.
+            float newLean = Mathf.Lerp(currentLean, targetLean, Time.deltaTime * cameraLeanSpeed);
+            camEuler.z = newLean;
+            _surfCharacter.viewTransform.localEulerAngles = camEuler;
         }
     }
 
@@ -83,14 +178,12 @@ public class WallJump : MonoBehaviour
     }
 
     /// <summary>
-    /// Checks for a wall by casting rays in multiple horizontal directions.
+    /// Checks for a wall by casting rays in several horizontal directions.
     /// Returns true if a valid wall is detected and outputs its normal.
     /// </summary>
     private bool CheckForWall(out Vector3 wallNormal)
     {
         wallNormal = Vector3.zero;
-
-        // Cast rays in several directions (cardinal and diagonals).
         Vector3[] directions = new Vector3[]
         {
             transform.right,
@@ -108,7 +201,6 @@ public class WallJump : MonoBehaviour
             RaycastHit hit;
             if (Physics.Raycast(transform.position, dir, out hit, wallCheckDistance, wallJumpMask))
             {
-                // Only consider surfaces steep enough (i.e. not floors).
                 if (hit.normal.y < wallNormalThreshold)
                 {
                     wallNormal = hit.normal;
@@ -122,7 +214,7 @@ public class WallJump : MonoBehaviour
 
     /// <summary>
     /// Simple ground check: casts a ray downward from the player's position.
-    /// Adjust the ray length if necessary for your collider.
+    /// Adjust the ray length as necessary for your collider.
     /// </summary>
     private bool IsGrounded()
     {
