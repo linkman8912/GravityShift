@@ -1,15 +1,16 @@
 using UnityEngine;
+using Fragsurf.Movement;  // Ensure this matches your namespace
 
 public class GrapplingHook : MonoBehaviour
 {
     [Header("Input Settings")]
     public KeyCode grappleKey = KeyCode.Mouse0;
-    public KeyCode pullKey = KeyCode.Tab;
-    public KeyCode cancelKey = KeyCode.Q;
+    public KeyCode pullKey = KeyCode.LeftControl;
+    public KeyCode cancelKey = KeyCode.E;
 
     [Header("Grapple Settings")]
     public float maxGrappleDistance = 50f;
-    public float pullSpeed = 10f;
+    public float pullSpeed = 30f;
     public float minRopeLength = 2f;
     public LayerMask grappleLayer;
 
@@ -24,7 +25,7 @@ public class GrapplingHook : MonoBehaviour
     public float swingForce = 5f;
 
     [Header("Fall Settings")]
-    [Tooltip("Vertical velocity (in world units/sec) to set when the grapple is released.")]
+    [Tooltip("Vertical speed to reset to on grapple release.")]
     public float normalFallSpeed = -9.81f;
 
     [Header("References")]
@@ -37,10 +38,11 @@ public class GrapplingHook : MonoBehaviour
     private bool _isGrappling = false;
     private Vector3 _grapplePoint;
     private float _currentRopeLength;
-    private float _prevY; // Used for detecting vertical velocity
+    private float _prevY;
 
     // Components
     private LineRenderer _lineRenderer;
+    private SurfCharacter _surfCharacter;
 
     void Start()
     {
@@ -48,7 +50,7 @@ public class GrapplingHook : MonoBehaviour
         if (hookCamera == null)
             hookCamera = Camera.main;
         if (hookCamera == null)
-            Debug.LogError("GrapplingHook: No camera found. Please assign a camera.");
+            Debug.LogError("GrapplingHook: No camera assigned.");
 
         // Default rope origin to the camera's transform if not set.
         if (ropeOrigin == null)
@@ -67,19 +69,23 @@ public class GrapplingHook : MonoBehaviour
         _lineRenderer.enabled = false;
 
         _prevY = transform.position.y;
+
+        // Get a reference to the SurfCharacter component.
+        _surfCharacter = GetComponent<SurfCharacter>();
+        if (_surfCharacter == null)
+        {
+            Debug.LogWarning("GrapplingHook: SurfCharacter component not found on this GameObject.");
+        }
     }
 
     void Update()
     {
-        // Start grappling when the grapple key is pressed.
         if (Input.GetKeyDown(grappleKey))
             TryStartGrapple();
 
-        // Cancel the grapple when the cancel key is pressed.
         if (_isGrappling && Input.GetKeyDown(cancelKey))
             StopGrapple();
 
-        // While grappling, shorten the rope if the pull key is held.
         if (_isGrappling && Input.GetKey(pullKey))
         {
             _currentRopeLength -= pullSpeed * Time.deltaTime;
@@ -87,7 +93,6 @@ public class GrapplingHook : MonoBehaviour
                 _currentRopeLength = minRopeLength;
         }
 
-        // Update the rope visualization.
         if (_isGrappling)
         {
             _lineRenderer.SetPosition(0, ropeOrigin.position);
@@ -99,11 +104,9 @@ public class GrapplingHook : MonoBehaviour
     {
         if (_isGrappling)
         {
-            // Calculate vector from grapple point to player.
+            // Enforce rope length constraint.
             Vector3 toPlayer = transform.position - _grapplePoint;
             float distance = toPlayer.magnitude;
-
-            // Clamp the player's position if they exceed the current rope length.
             if (distance > _currentRopeLength)
             {
                 transform.position = _grapplePoint + toPlayer.normalized * _currentRopeLength;
@@ -113,14 +116,14 @@ public class GrapplingHook : MonoBehaviour
             float verticalVelocity = (transform.position.y - _prevY) / Time.deltaTime;
             _prevY = transform.position.y;
 
-            // If falling, automatically extend the rope (up to a maximum).
+            // Automatically extend the rope when falling.
             if (verticalVelocity < 0)
             {
                 _currentRopeLength += extendSpeed * Time.deltaTime;
                 _currentRopeLength = Mathf.Min(_currentRopeLength, maxExtendedRopeLength);
             }
 
-            // If at the end of the rope and falling, apply extra lateral (tangential) swing force.
+            // Apply extra lateral swing force if at rope's end and falling.
             if (distance >= _currentRopeLength - 0.1f && verticalVelocity < 0)
             {
                 Vector3 ropeDir = (transform.position - _grapplePoint).normalized;
@@ -142,17 +145,20 @@ public class GrapplingHook : MonoBehaviour
             return;
         }
 
-        // Use the center of the screen for the ray.
+        // Use the center of the screen.
         Ray ray = hookCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         Debug.DrawRay(ray.origin, ray.direction * maxGrappleDistance, Color.red, 2f);
 
-        // Raycast using the center ray.
         if (Physics.Raycast(ray, out RaycastHit hit, maxGrappleDistance, grappleLayer))
         {
             _isGrappling = true;
             _grapplePoint = hit.point;
             _currentRopeLength = Vector3.Distance(transform.position, _grapplePoint);
             _lineRenderer.enabled = true;
+            if (_surfCharacter != null)
+            {
+                _surfCharacter.isGrappling = true;
+            }
             Debug.Log("Grapple hit: " + hit.collider.name);
         }
         else
@@ -165,18 +171,13 @@ public class GrapplingHook : MonoBehaviour
     {
         _isGrappling = false;
         _lineRenderer.enabled = false;
-
-        // If a Rigidbody exists, reset its vertical velocity to the normal fall speed.
-        Rigidbody rb = GetComponent<Rigidbody>();
-        if (rb != null)
+        if (_surfCharacter != null)
         {
-            Vector3 vel = rb.velocity;
-            // Only adjust if falling faster than normal.
-            if (vel.y < normalFallSpeed)
-            {
-                vel.y = normalFallSpeed;
-                rb.velocity = vel;
-            }
+            _surfCharacter.isGrappling = false;
+            // Reset the vertical velocity in moveData so that normal falling resumes.
+            Vector3 vel = _surfCharacter.moveData.velocity;
+            vel.y = normalFallSpeed;
+            _surfCharacter.moveData.velocity = vel;
         }
     }
 }

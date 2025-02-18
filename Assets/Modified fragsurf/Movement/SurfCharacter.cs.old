@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -20,6 +20,7 @@ namespace Fragsurf.Movement
     [AddComponentMenu("Fragsurf/Surf Character")]
     public class SurfCharacter : MonoBehaviour, ISurfControllable
     {
+
         public bool disableAirStrafe = false;
 
         public enum ColliderType
@@ -113,12 +114,6 @@ namespace Fragsurf.Movement
 
         #endregion
 
-        #region Grapple Flag
-        // NEW: A public flag to indicate if the player is grappling.
-        [HideInInspector]
-        public bool isGrappling = false;
-        #endregion
-
         #region Unity Methods
 
         private void OnDrawGizmos()
@@ -174,7 +169,7 @@ namespace Fragsurf.Movement
             if (existingCollider != null)
                 Destroy(existingCollider);
 
-            // Ensure a Rigidbody exists.
+            // Ensure a Rigidbody exists (even though we’ll make it kinematic).
             rb = gameObject.GetComponent<Rigidbody>();
             if (rb == null)
                 rb = gameObject.AddComponent<Rigidbody>();
@@ -205,7 +200,7 @@ namespace Fragsurf.Movement
                     break;
             }
 
-            // Set the collider as a trigger.
+            // Set the collider as a trigger so that Unity’s physics engine does not push objects automatically.
             _collider.isTrigger = true;
 
             // Set up movement data.
@@ -266,13 +261,10 @@ namespace Fragsurf.Movement
 
             _controller.ProcessMovement(this, movementConfig, Time.deltaTime);
 
-            // NEW: If grappling, zero out vertical velocity to prevent SurfCharacter from applying extra falling force.
-            if(isGrappling)
-            {
-                _moveData.velocity.y = 0f;
-            }
-
+            // --- Apply Reaction (Push–Back) from Heavy Objects ---
+            // _externalPushVelocity is computed in FixedUpdate (or adjusted via BoxCast)
             _moveData.origin += _externalPushVelocity * Time.deltaTime;
+            // ---------------------------------------------------------
 
             // Apply our calculated movement.
             transform.position = _moveData.origin;
@@ -282,16 +274,20 @@ namespace Fragsurf.Movement
 
         /// <summary>
         /// Custom FixedUpdate that:
-        /// 1. Processes overlapping colliders and resolves penetration.
+        /// 1. Processes overlapping colliders:
+        ///    - For light objects (mass ≤ player's weight and ≤ maxPushableMass), an impulse is applied
+        ///      and a penetration correction is computed so the player does not enter them.
+        ///    - For heavy objects (object.mass > player's weight), a reaction force is computed and
+        ///      ComputePenetration is used to resolve any penetration.
         /// 2. Performs a BoxCast from the previous position to catch fast movement (prevent tunneling).
         /// </summary>
         private void FixedUpdate()
         {
             Vector3 boxCenter = _colliderObject.transform.position;
             Vector3 halfExtents = colliderSize * 0.5f;
-            int layerMask = ~0; // Check all layers.
+            int layerMask = ~0; // Check all layers (adjust if needed).
 
-            // Process overlapping colliders.
+            // --- Process Overlapping Colliders ---
             Collider[] overlaps = Physics.OverlapBox(boxCenter, halfExtents, Quaternion.identity, layerMask);
 
             Vector3 heavyReactionSum = Vector3.zero;
@@ -313,12 +309,14 @@ namespace Fragsurf.Movement
 
                 if (otherRb.mass <= weight && otherRb.mass <= maxPushableMass)
                 {
+                    // Push the lighter object.
                     Vector3 direction = (col.transform.position - transform.position).normalized;
                     float pushForceMagnitude = rigidbodyPushForce;
                     Vector3 force = direction * pushForceMagnitude;
                     force = Vector3.ClampMagnitude(force, maxPushImpulse);
                     otherRb.AddForce(force, ForceMode.Impulse);
 
+                    // Compute penetration correction for lighter objects.
                     Vector3 penDir;
                     float penDist;
                     if (Physics.ComputePenetration(
@@ -330,13 +328,15 @@ namespace Fragsurf.Movement
                         lightCount++;
                     }
                 }
-                else // For heavy objects.
+                else // For heavy objects (object.mass > player's weight)
                 {
+                    // Compute a reaction force based on the closest point.
                     Vector3 closestPoint = col.ClosestPoint(transform.position);
                     Vector3 reaction = (transform.position - closestPoint).normalized * rigidbodyPushForce;
                     heavyReactionSum += reaction;
                     heavyCount++;
 
+                    // Compute penetration correction for heavy objects.
                     Vector3 penDir;
                     float penDist;
                     if (Physics.ComputePenetration(
@@ -352,6 +352,7 @@ namespace Fragsurf.Movement
             if (heavyCount > 0)
             {
                 _externalPushVelocity = heavyReactionSum / heavyCount;
+                // Immediately adjust the player's position to resolve penetration with heavy objects.
                 _moveData.origin += heavyCorrection;
             }
             else
@@ -361,10 +362,11 @@ namespace Fragsurf.Movement
 
             if (lightCount > 0)
             {
+                // Adjust the player's position to resolve penetration with lighter objects.
                 _moveData.origin += lightCorrection / lightCount;
             }
 
-            // Additional BoxCast to prevent tunneling.
+            // --- Additional BoxCast to Prevent Tunneling ---
             Vector3 movement = _moveData.origin - prevPosition;
             float distance = movement.magnitude;
             if (distance > 0.001f)
@@ -374,11 +376,14 @@ namespace Fragsurf.Movement
                 if (Physics.BoxCast(prevPosition, halfExtents, direction, out hit, Quaternion.identity, distance, layerMask))
                 {
                     Rigidbody hitRb = hit.collider.attachedRigidbody;
+                    // If the hit object is heavy, process it.
                     if (hitRb != null && !hitRb.isKinematic && hitRb.mass > weight)
                     {
                         Vector3 tunnelDirection = (transform.position - hit.point).normalized;
                         Vector3 tunnelReaction = tunnelDirection * rigidbodyPushForce;
                         _externalPushVelocity += tunnelReaction / weight;
+
+                        // Clamp the player's new position to just before the hit point.
                         _moveData.origin = hit.point - direction * 0.1f;
                     }
                 }
@@ -391,15 +396,20 @@ namespace Fragsurf.Movement
 
         private void UpdateMoveData()
         {
-            if(disableAirStrafe)
-            {
-                _moveData.verticalAxis = 0f;
-                _moveData.horizontalAxis = 0f;
+            // Old code for this
+            // _moveData.verticalAxis = Input.GetAxisRaw("Vertical");
+            // _moveData.horizontalAxis = Input.GetAxisRaw("Horizontal");
+
+            // add a mechanism to stop the player from airstrafing
+            
+            if(disableAirStrafe) {
+              // When air control is locked, ignore horizontal/vertical input.
+              _moveData.verticalAxis = 0f;
+              _moveData.horizontalAxis = 0f;
             }
-            else
-            {
-                _moveData.verticalAxis = Input.GetAxisRaw("Vertical");
-                _moveData.horizontalAxis = Input.GetAxisRaw("Horizontal");
+            else {
+              _moveData.verticalAxis = Input.GetAxisRaw("Vertical");
+              _moveData.horizontalAxis = Input.GetAxisRaw("Horizontal");
             }
             
             _moveData.sprinting = Input.GetButton("Sprint");

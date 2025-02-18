@@ -4,12 +4,12 @@ public class GrapplingHook : MonoBehaviour
 {
     [Header("Input Settings")]
     public KeyCode grappleKey = KeyCode.Mouse0;
-    public KeyCode pullKey = KeyCode.LeftControl;
-    public KeyCode cancelKey = KeyCode.E;
+    public KeyCode pullKey = KeyCode.Tab;
+    public KeyCode cancelKey = KeyCode.Q;
 
     [Header("Grapple Settings")]
     public float maxGrappleDistance = 50f;
-    public float pullSpeed = 10f;
+    public float pullSpeed = 30f;
     public float minRopeLength = 2f;
     public LayerMask grappleLayer;
 
@@ -23,6 +23,10 @@ public class GrapplingHook : MonoBehaviour
     [Tooltip("Extra force applied to swing the player toward the other side of the rope.")]
     public float swingForce = 5f;
 
+    [Header("Fall Settings")]
+    [Tooltip("Vertical velocity (in world units/sec) to set when the grapple is released.")]
+    public float normalFallSpeed = -9.81f;
+
     [Header("References")]
     [Tooltip("The camera used for grappling. Defaults to Camera.main if left empty.")]
     public Camera hookCamera;
@@ -33,7 +37,7 @@ public class GrapplingHook : MonoBehaviour
     private bool _isGrappling = false;
     private Vector3 _grapplePoint;
     private float _currentRopeLength;
-    private float _prevY; // used for detecting vertical velocity
+    private float _prevY; // Used for detecting vertical velocity
 
     // Components
     private LineRenderer _lineRenderer;
@@ -71,11 +75,11 @@ public class GrapplingHook : MonoBehaviour
         if (Input.GetKeyDown(grappleKey))
             TryStartGrapple();
 
-        // Cancel grapple if the cancel key is pressed.
+        // Cancel the grapple when the cancel key is pressed.
         if (_isGrappling && Input.GetKeyDown(cancelKey))
             StopGrapple();
 
-        // Shorten the rope when pulling.
+        // While grappling, shorten the rope if the pull key is held.
         if (_isGrappling && Input.GetKey(pullKey))
         {
             _currentRopeLength -= pullSpeed * Time.deltaTime;
@@ -99,7 +103,7 @@ public class GrapplingHook : MonoBehaviour
             Vector3 toPlayer = transform.position - _grapplePoint;
             float distance = toPlayer.magnitude;
 
-            // Clamp player's position if they exceed the current rope length.
+            // Clamp the player's position if they exceed the current rope length.
             if (distance > _currentRopeLength)
             {
                 transform.position = _grapplePoint + toPlayer.normalized * _currentRopeLength;
@@ -109,25 +113,21 @@ public class GrapplingHook : MonoBehaviour
             float verticalVelocity = (transform.position.y - _prevY) / Time.deltaTime;
             _prevY = transform.position.y;
 
-            // If falling, automatically extend the rope (up to a max length).
+            // If falling, automatically extend the rope (up to a maximum).
             if (verticalVelocity < 0)
             {
                 _currentRopeLength += extendSpeed * Time.deltaTime;
                 _currentRopeLength = Mathf.Min(_currentRopeLength, maxExtendedRopeLength);
             }
 
-            // When the rope is fully extended (player at the rope's end) and falling,
-            // apply extra lateral (tangential) force to simulate swinging to the other side.
+            // If at the end of the rope and falling, apply extra lateral (tangential) swing force.
             if (distance >= _currentRopeLength - 0.1f && verticalVelocity < 0)
             {
-                // Compute rope's direction.
                 Vector3 ropeDir = (transform.position - _grapplePoint).normalized;
-                // Tangential component of gravity along the circle (remove the component along the rope).
                 Vector3 tangential = Vector3.down - Vector3.Dot(Vector3.down, ropeDir) * ropeDir;
                 if (tangential.sqrMagnitude > 0.001f)
                 {
                     tangential.Normalize();
-                    // Apply extra swing force.
                     transform.position += tangential * swingForce * Time.deltaTime;
                 }
             }
@@ -142,10 +142,11 @@ public class GrapplingHook : MonoBehaviour
             return;
         }
 
-        // Use the center of the screen.
+        // Use the center of the screen for the ray.
         Ray ray = hookCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         Debug.DrawRay(ray.origin, ray.direction * maxGrappleDistance, Color.red, 2f);
 
+        // Raycast using the center ray.
         if (Physics.Raycast(ray, out RaycastHit hit, maxGrappleDistance, grappleLayer))
         {
             _isGrappling = true;
@@ -164,5 +165,18 @@ public class GrapplingHook : MonoBehaviour
     {
         _isGrappling = false;
         _lineRenderer.enabled = false;
+
+        // If a Rigidbody exists, reset its vertical velocity to the normal fall speed.
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            Vector3 vel = rb.velocity;
+            // Only adjust if falling faster than normal.
+            if (vel.y < normalFallSpeed)
+            {
+                vel.y = normalFallSpeed;
+                rb.velocity = vel;
+            }
+        }
     }
 }
