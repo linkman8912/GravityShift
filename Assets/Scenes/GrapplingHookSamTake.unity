@@ -1102,7 +1102,7 @@ MonoBehaviour:
   pullKey: 9
   cancelKey: 113
   maxGrappleDistance: 100
-  pullSpeed: 10
+  pullSpeed: 30
   minRopeLength: 2
   grappleLayer:
     serializedVersion: 2
@@ -1112,7 +1112,7 @@ MonoBehaviour:
   swingForce: 5
   normalFallSpeed: -9.81
   hookCamera: {fileID: 1866250699}
-  ropeOrigin: {fileID: 1866250700}
+  ropeOrigin: {fileID: 1871894321}
 --- !u!114 &1077686370
 MonoBehaviour:
   m_ObjectHideFlags: 0

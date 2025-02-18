@@ -1,5 +1,5 @@
 using UnityEngine;
-using Fragsurf.Movement;  // Ensure this matches your namespace
+using Fragsurf.Movement;  // Ensure this matches your project's namespace
 
 public class GrapplingHook : MonoBehaviour
 {
@@ -10,13 +10,12 @@ public class GrapplingHook : MonoBehaviour
 
     [Header("Grapple Settings")]
     public float maxGrappleDistance = 50f;
-    public float pullSpeed = 30f;
+    public float pullSpeed = 10f;
     public float minRopeLength = 2f;
     public LayerMask grappleLayer;
 
     [Header("Rope Extension Settings")]
-    [Tooltip("Speed at which the rope automatically extends when falling.")]
-    public float extendSpeed = 5f;
+    private float extendSpeed = 0f;
     [Tooltip("Maximum rope length when extended.")]
     public float maxExtendedRopeLength = 70f;
 
@@ -25,8 +24,8 @@ public class GrapplingHook : MonoBehaviour
     public float swingForce = 5f;
 
     [Header("Fall Settings")]
-    [Tooltip("Vertical speed to reset to on grapple release.")]
-    public float normalFallSpeed = -9.81f;
+    [Tooltip("Vertical velocity to set upon releasing the grapple (e.g. 0 to cancel falling momentum).")]
+    public float resetVerticalVelocity = 0f;
 
     [Header("References")]
     [Tooltip("The camera used for grappling. Defaults to Camera.main if left empty.")]
@@ -73,19 +72,20 @@ public class GrapplingHook : MonoBehaviour
         // Get a reference to the SurfCharacter component.
         _surfCharacter = GetComponent<SurfCharacter>();
         if (_surfCharacter == null)
-        {
             Debug.LogWarning("GrapplingHook: SurfCharacter component not found on this GameObject.");
-        }
     }
 
     void Update()
     {
+        // Start grappling when the grapple key is pressed.
         if (Input.GetKeyDown(grappleKey))
             TryStartGrapple();
 
+        // Release the grapple when the cancel key is pressed.
         if (_isGrappling && Input.GetKeyDown(cancelKey))
             StopGrapple();
 
+        // Allow rope shortening if the pull key is held.
         if (_isGrappling && Input.GetKey(pullKey))
         {
             _currentRopeLength -= pullSpeed * Time.deltaTime;
@@ -93,6 +93,7 @@ public class GrapplingHook : MonoBehaviour
                 _currentRopeLength = minRopeLength;
         }
 
+        // Update the rope visualization.
         if (_isGrappling)
         {
             _lineRenderer.SetPosition(0, ropeOrigin.position);
@@ -104,7 +105,7 @@ public class GrapplingHook : MonoBehaviour
     {
         if (_isGrappling)
         {
-            // Enforce rope length constraint.
+            // Enforce the rope's length: clamp the player's distance to the grapple point.
             Vector3 toPlayer = transform.position - _grapplePoint;
             float distance = toPlayer.magnitude;
             if (distance > _currentRopeLength)
@@ -116,14 +117,14 @@ public class GrapplingHook : MonoBehaviour
             float verticalVelocity = (transform.position.y - _prevY) / Time.deltaTime;
             _prevY = transform.position.y;
 
-            // Automatically extend the rope when falling.
+            // Extend the rope when falling.
             if (verticalVelocity < 0)
             {
                 _currentRopeLength += extendSpeed * Time.deltaTime;
                 _currentRopeLength = Mathf.Min(_currentRopeLength, maxExtendedRopeLength);
             }
 
-            // Apply extra lateral swing force if at rope's end and falling.
+            // Apply extra lateral swing force when at the rope's end and falling.
             if (distance >= _currentRopeLength - 0.1f && verticalVelocity < 0)
             {
                 Vector3 ropeDir = (transform.position - _grapplePoint).normalized;
@@ -145,7 +146,7 @@ public class GrapplingHook : MonoBehaviour
             return;
         }
 
-        // Use the center of the screen.
+        // Cast a ray from the center of the screen.
         Ray ray = hookCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         Debug.DrawRay(ray.origin, ray.direction * maxGrappleDistance, Color.red, 2f);
 
@@ -155,10 +156,7 @@ public class GrapplingHook : MonoBehaviour
             _grapplePoint = hit.point;
             _currentRopeLength = Vector3.Distance(transform.position, _grapplePoint);
             _lineRenderer.enabled = true;
-            if (_surfCharacter != null)
-            {
-                _surfCharacter.isGrappling = true;
-            }
+            // While grappling, leave _surfCharacter.isGrappling false for full momentum control.
             Debug.Log("Grapple hit: " + hit.collider.name);
         }
         else
@@ -173,11 +171,12 @@ public class GrapplingHook : MonoBehaviour
         _lineRenderer.enabled = false;
         if (_surfCharacter != null)
         {
-            _surfCharacter.isGrappling = false;
-            // Reset the vertical velocity in moveData so that normal falling resumes.
+            // Immediately cancel falling momentum on the same frame the grapple is released.
             Vector3 vel = _surfCharacter.moveData.velocity;
-            vel.y = normalFallSpeed;
+            vel.y = resetVerticalVelocity;
             _surfCharacter.moveData.velocity = vel;
+            // Immediately clear the flag.
+            _surfCharacter.isGrappling = false;
         }
     }
 }
