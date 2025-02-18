@@ -14,7 +14,7 @@ public class GrapplingHook : MonoBehaviour
     public LayerMask grappleLayer;
 
     [Header("References")]
-    [Tooltip("Assign the camera used for grappling. Defaults to Camera.main if left empty.")]
+    [Tooltip("The camera used for grappling. Defaults to Camera.main if left empty.")]
     public Camera hookCamera;
     [Tooltip("The transform from which the rope visually originates (e.g., a weapon tip or camera).")]
     public Transform ropeOrigin;
@@ -42,16 +42,15 @@ public class GrapplingHook : MonoBehaviour
         // Create and configure the LineRenderer.
         _lineRenderer = gameObject.AddComponent<LineRenderer>();
         _lineRenderer.positionCount = 2;
-        _lineRenderer.startWidth = 0.2f;  // Adjust width as needed.
+        _lineRenderer.startWidth = 0.2f;
         _lineRenderer.endWidth = 0.2f;
 
-        // Use our custom shader to disable depth testing.
-        Material ropeMaterial = new Material(Shader.Find("Custom/AlwaysVisibleUnlit"));
-        ropeMaterial.color = Color.yellow; // Set your preferred color.
-        ropeMaterial.renderQueue = 4000;     // Ensures it's drawn last.
+        // Use an unlit shader for constant brightness.
+        Material ropeMaterial = new Material(Shader.Find("Unlit/Color"));
+        ropeMaterial.color = Color.yellow;
         _lineRenderer.material = ropeMaterial;
-        
-        // Optional: Set sorting layer/order if needed.
+
+        // Optional: Set sorting so it renders on top.
         _lineRenderer.sortingLayerName = "Overlay";
         _lineRenderer.sortingOrder = 1000;
 
@@ -60,15 +59,15 @@ public class GrapplingHook : MonoBehaviour
 
     void Update()
     {
-        // Fire the grappling hook on left click.
+        // Start grappling when the grapple key is pressed.
         if (Input.GetKeyDown(grappleKey))
             TryStartGrapple();
 
-        // Cancel the grapple (for example, press "E" to release).
+        // Cancel the grapple when the cancel key is pressed.
         if (_isGrappling && Input.GetKeyDown(cancelKey))
             StopGrapple();
 
-        // If currently grappling and the pull key is held down, shorten the rope.
+        // While grappling, shorten the rope if the pull key is held.
         if (_isGrappling && Input.GetKey(pullKey))
         {
             _currentRopeLength -= pullSpeed * Time.deltaTime;
@@ -76,7 +75,7 @@ public class GrapplingHook : MonoBehaviour
                 _currentRopeLength = minRopeLength;
         }
 
-        // Update rope visualization.
+        // Update the rope's positions if grappling.
         if (_isGrappling)
         {
             _lineRenderer.SetPosition(0, ropeOrigin.position);
@@ -84,24 +83,20 @@ public class GrapplingHook : MonoBehaviour
         }
     }
 
-    // LateUpdate ensures the rope constraint is applied after other position updates.
     void LateUpdate()
     {
         if (_isGrappling)
         {
+            // Enforce the rope's length constraint by clamping the player's position.
             Vector3 toPlayer = transform.position - _grapplePoint;
             float distance = toPlayer.magnitude;
-
-            // Clamp player position if farther than the current rope length.
             if (distance > _currentRopeLength)
             {
-                Vector3 newPos = _grapplePoint + toPlayer.normalized * _currentRopeLength;
-                transform.position = newPos;
+                transform.position = _grapplePoint + toPlayer.normalized * _currentRopeLength;
             }
         }
     }
 
-    // Attempt to start the grapple by raycasting from a rotated ray.
     void TryStartGrapple()
     {
         if (hookCamera == null)
@@ -110,32 +105,27 @@ public class GrapplingHook : MonoBehaviour
             return;
         }
 
-        // Get the original ray from the mouse position.
-        Ray originalRay = hookCamera.ScreenPointToRay(Input.mousePosition);
+        // Use the center of the screen as the starting point without any offset.
+        Ray ray = hookCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
 
-        // First, rotate 50° to the left (negative means left rotation).
-        Quaternion leftRotation = Quaternion.AngleAxis(-50f, hookCamera.transform.up);
-        // Then, tilt down 15° by rotating around the camera's right axis.
-        Quaternion downRotation = Quaternion.AngleAxis(15f, hookCamera.transform.right);
-        // Combine the rotations (order matters).
-        Quaternion combinedRotation = leftRotation * downRotation;
-        // Apply the combined rotation to the original ray's direction.
-        Vector3 rotatedDirection = combinedRotation * originalRay.direction;
+        // Draw a debug ray in the scene view (red) for 2 seconds.
+        Debug.DrawRay(ray.origin, ray.direction * maxGrappleDistance, Color.red, 2f);
 
-        // Create a new ray using the original origin and the rotated direction.
-        Ray ray = new Ray(originalRay.origin, rotatedDirection);
-
-        // Perform the raycast.
+        // Raycast using the center ray.
         if (Physics.Raycast(ray, out RaycastHit hit, maxGrappleDistance, grappleLayer))
         {
             _isGrappling = true;
             _grapplePoint = hit.point;
             _currentRopeLength = Vector3.Distance(transform.position, _grapplePoint);
             _lineRenderer.enabled = true;
+            Debug.Log("Grapple hit: " + hit.collider.name);
+        }
+        else
+        {
+            Debug.Log("Grapple ray did not hit any target.");
         }
     }
 
-    // Cancel the grapple.
     void StopGrapple()
     {
         _isGrappling = false;
