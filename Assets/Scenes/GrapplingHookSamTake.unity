@@ -759,11 +759,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!4 &821391537 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5467285085316221433, guid: a840589249729984398df665ca6e2508, type: 3}
-  m_PrefabInstance: {fileID: 1319735965}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &923523190
 GameObject:
   m_ObjectHideFlags: 0
@@ -1112,8 +1107,12 @@ MonoBehaviour:
   grappleLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  extendSpeed: 5
+  maxExtendedRopeLength: 70
+  swingForce: 5
+  normalFallSpeed: -9.81
   hookCamera: {fileID: 1866250699}
-  ropeOrigin: {fileID: 821391537}
+  ropeOrigin: {fileID: 1866250700}
 --- !u!114 &1077686370
 MonoBehaviour:
   m_ObjectHideFlags: 0
