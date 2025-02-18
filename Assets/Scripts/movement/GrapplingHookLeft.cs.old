@@ -15,8 +15,7 @@ public class GrapplingHook : MonoBehaviour
     public LayerMask grappleLayer;
 
     [Header("Rope Extension Settings")]
-    [Tooltip("Speed at which the rope automatically extends when falling.")]
-    public float extendSpeed = 5f;
+    private float extendSpeed = 0f;
     [Tooltip("Maximum rope length when extended.")]
     public float maxExtendedRopeLength = 70f;
 
@@ -43,9 +42,6 @@ public class GrapplingHook : MonoBehaviour
     // Components
     private LineRenderer _lineRenderer;
     private SurfCharacter _surfCharacter;
-
-    // Flag to mark that the grapple was just released (so that isGrappling remains true for one frame)
-    private bool _justReleased = false;
 
     void Start()
     {
@@ -76,19 +72,20 @@ public class GrapplingHook : MonoBehaviour
         // Get a reference to the SurfCharacter component.
         _surfCharacter = GetComponent<SurfCharacter>();
         if (_surfCharacter == null)
-        {
             Debug.LogWarning("GrapplingHook: SurfCharacter component not found on this GameObject.");
-        }
     }
 
     void Update()
     {
+        // Start grappling when the grapple key is pressed.
         if (Input.GetKeyDown(grappleKey))
             TryStartGrapple();
 
+        // Release the grapple when the cancel key is pressed.
         if (_isGrappling && Input.GetKeyDown(cancelKey))
             StopGrapple();
 
+        // Allow rope shortening if the pull key is held.
         if (_isGrappling && Input.GetKey(pullKey))
         {
             _currentRopeLength -= pullSpeed * Time.deltaTime;
@@ -96,17 +93,11 @@ public class GrapplingHook : MonoBehaviour
                 _currentRopeLength = minRopeLength;
         }
 
+        // Update the rope visualization.
         if (_isGrappling)
         {
             _lineRenderer.SetPosition(0, ropeOrigin.position);
             _lineRenderer.SetPosition(1, _grapplePoint);
-        }
-
-        // If we just released the grapple last frame, now reset the flag.
-        if (_justReleased && _surfCharacter != null)
-        {
-            _surfCharacter.isGrappling = false;
-            _justReleased = false;
         }
     }
 
@@ -114,7 +105,7 @@ public class GrapplingHook : MonoBehaviour
     {
         if (_isGrappling)
         {
-            // Enforce the rope's length constraint.
+            // Enforce the rope's length: clamp the player's distance to the grapple point.
             Vector3 toPlayer = transform.position - _grapplePoint;
             float distance = toPlayer.magnitude;
             if (distance > _currentRopeLength)
@@ -165,7 +156,7 @@ public class GrapplingHook : MonoBehaviour
             _grapplePoint = hit.point;
             _currentRopeLength = Vector3.Distance(transform.position, _grapplePoint);
             _lineRenderer.enabled = true;
-            // Note: While grappling, we let the SurfCharacter run normally (isGrappling remains false).
+            // While grappling, leave _surfCharacter.isGrappling false for full momentum control.
             Debug.Log("Grapple hit: " + hit.collider.name);
         }
         else
@@ -176,19 +167,16 @@ public class GrapplingHook : MonoBehaviour
 
     void StopGrapple()
     {
-        // On releasing the grapple, we want to cancel the falling momentum on this frame.
         _isGrappling = false;
         _lineRenderer.enabled = false;
         if (_surfCharacter != null)
         {
-            // Set isGrappling to true on this frame to cancel momentum...
-            _surfCharacter.isGrappling = true;
-            // ...and reset vertical velocity.
+            // Immediately cancel falling momentum on the same frame the grapple is released.
             Vector3 vel = _surfCharacter.moveData.velocity;
             vel.y = resetVerticalVelocity;
             _surfCharacter.moveData.velocity = vel;
-            // Mark that we've just released so that on the next frame we can set it back to false.
-            _justReleased = true;
+            // Immediately clear the flag.
+            _surfCharacter.isGrappling = false;
         }
     }
 }

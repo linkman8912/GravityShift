@@ -1107,10 +1107,10 @@ MonoBehaviour:
   grappleLayer:
     serializedVersion: 2
     m_Bits: 4294967295
-  extendSpeed: 5
+  extendSpeed: 0
   maxExtendedRopeLength: 70
   swingForce: 5
-  normalFallSpeed: -9.81
+  resetVerticalVelocity: 0
   hookCamera: {fileID: 1866250699}
   ropeOrigin: {fileID: 1871894321}
 --- !u!114 &1077686370

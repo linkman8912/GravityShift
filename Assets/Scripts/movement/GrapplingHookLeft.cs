@@ -20,7 +20,7 @@ public class GrapplingHook : MonoBehaviour
     public float maxExtendedRopeLength = 70f;
 
     [Header("Swing Settings")]
-    [Tooltip("Extra force applied to swing the player toward the other side of the rope.")]
+    [Tooltip("Extra force applied to send the player symmetrically across the swing.")]
     public float swingForce = 5f;
 
     [Header("Fall Settings")]
@@ -105,36 +105,55 @@ public class GrapplingHook : MonoBehaviour
     {
         if (_isGrappling)
         {
-            // Enforce the rope's length: clamp the player's distance to the grapple point.
+            // Calculate vector from the grapple point to the player.
             Vector3 toPlayer = transform.position - _grapplePoint;
-            float distance = toPlayer.magnitude;
-            if (distance > _currentRopeLength)
+            float currentDistance = toPlayer.magnitude;
+            
+            // If the player is beyond the rope's current length, apply a tension force.
+            if (currentDistance > _currentRopeLength)
             {
-                transform.position = _grapplePoint + toPlayer.normalized * _currentRopeLength;
+                float excess = currentDistance - _currentRopeLength;
+                float tensionCoefficient = 10f;  // Tweak this value to adjust tension feel.
+                Vector3 tensionForce = toPlayer.normalized * excess * tensionCoefficient * Time.deltaTime;
+                transform.position -= tensionForce;
             }
-
+            
             // Compute vertical velocity.
             float verticalVelocity = (transform.position.y - _prevY) / Time.deltaTime;
             _prevY = transform.position.y;
-
-            // Extend the rope when falling.
+            
+            // Allow the rope to extend while falling.
             if (verticalVelocity < 0)
             {
                 _currentRopeLength += extendSpeed * Time.deltaTime;
                 _currentRopeLength = Mathf.Min(_currentRopeLength, maxExtendedRopeLength);
             }
-
-            // Apply extra lateral swing force when at the rope's end and falling.
-            if (distance >= _currentRopeLength - 0.1f && verticalVelocity < 0)
+            
+            // When near the bottom of the arc, mirror the horizontal offset.
+            // Check if the angle between toPlayer and vertical down is small.
+            float angleFromDown = Vector3.Angle(toPlayer, Vector3.down);
+            if (angleFromDown < 30f)  // Adjust this threshold as needed.
             {
-                Vector3 ropeDir = (transform.position - _grapplePoint).normalized;
-                Vector3 tangential = Vector3.down - Vector3.Dot(Vector3.down, ropeDir) * ropeDir;
-                if (tangential.sqrMagnitude > 0.001f)
-                {
-                    tangential.Normalize();
-                    transform.position += tangential * swingForce * Time.deltaTime;
-                }
+                // Get the horizontal (XZ) offset relative to the grapple point.
+                Vector3 horizontalOffset = Vector3.ProjectOnPlane(toPlayer, Vector3.up);
+                // Compute the symmetric (mirrored) horizontal offset.
+                Vector3 desiredHorizontalOffset = -horizontalOffset;
+                // To maintain the rope length, compute the vertical component needed.
+                float desiredHorizontalMag = desiredHorizontalOffset.magnitude;
+                float desiredVertical = Mathf.Sqrt(Mathf.Max(0, currentDistance * currentDistance - desiredHorizontalMag * desiredHorizontalMag));
+                // Since the grapple point is above the player, we expect a negative vertical offset.
+                desiredVertical = -Mathf.Abs(desiredVertical);
+                Vector3 desiredPosition = _grapplePoint + desiredHorizontalOffset + new Vector3(0, desiredVertical, 0);
+                
+                // Compute the adjustment vector toward the desired symmetric position.
+                Vector3 swingAdjustment = desiredPosition - transform.position;
+                float swingAdjustmentFactor = swingForce * Time.deltaTime; // Tweak this factor as needed.
+                transform.position += swingAdjustment * swingAdjustmentFactor;
             }
+            
+            // Update the rope visualization.
+            _lineRenderer.SetPosition(0, ropeOrigin.position);
+            _lineRenderer.SetPosition(1, _grapplePoint);
         }
     }
 
