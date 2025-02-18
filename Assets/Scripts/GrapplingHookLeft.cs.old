@@ -59,11 +59,11 @@ public class GrapplingHook : MonoBehaviour
         if (Input.GetKeyDown(grappleKey))
             TryStartGrapple();
 
-        // Cancel the grapple (e.g., press "E" to release).
+        // Cancel the grapple (for example, press "E" to release).
         if (_isGrappling && Input.GetKeyDown(cancelKey))
             StopGrapple();
 
-        // Shorten the rope if the pull key is held.
+        // If currently grappling and the pull key is held down, shorten the rope.
         if (_isGrappling && Input.GetKey(pullKey))
         {
             _currentRopeLength -= pullSpeed * Time.deltaTime;
@@ -71,7 +71,7 @@ public class GrapplingHook : MonoBehaviour
                 _currentRopeLength = minRopeLength;
         }
 
-        // Update the rope's visual endpoints.
+        // Update rope visualization.
         if (_isGrappling)
         {
             _lineRenderer.SetPosition(0, ropeOrigin.position);
@@ -96,6 +96,7 @@ public class GrapplingHook : MonoBehaviour
         }
     }
 
+    // Attempt to start the grapple by raycasting from a rotated ray.
     void TryStartGrapple()
     {
         if (hookCamera == null)
@@ -104,7 +105,22 @@ public class GrapplingHook : MonoBehaviour
             return;
         }
 
-        Ray ray = hookCamera.ScreenPointToRay(Input.mousePosition);
+        // Get the original ray from the mouse position.
+        Ray originalRay = hookCamera.ScreenPointToRay(Input.mousePosition);
+
+        // First, rotate 50° to the left (negative means left rotation).
+        Quaternion leftRotation = Quaternion.AngleAxis(-50f, hookCamera.transform.up);
+        // Then, tilt down 15° by rotating around the camera's right axis.
+        Quaternion downRotation = Quaternion.AngleAxis(-30f, hookCamera.transform.right);
+        // Combine the rotations (order matters; this applies the down rotation first, then the left rotation).
+        Quaternion combinedRotation = leftRotation * downRotation;
+        // Apply the combined rotation to the original ray's direction.
+        Vector3 rotatedDirection = combinedRotation * originalRay.direction;
+
+        // Create a new ray using the original origin and the rotated direction.
+        Ray ray = new Ray(originalRay.origin, rotatedDirection);
+
+        // Perform the raycast.
         if (Physics.Raycast(ray, out RaycastHit hit, maxGrappleDistance, grappleLayer))
         {
             _isGrappling = true;
@@ -114,6 +130,7 @@ public class GrapplingHook : MonoBehaviour
         }
     }
 
+    // Cancel the grapple.
     void StopGrapple()
     {
         _isGrappling = false;

@@ -42,14 +42,19 @@ public class GrapplingHook : MonoBehaviour
         // Create and configure the LineRenderer.
         _lineRenderer = gameObject.AddComponent<LineRenderer>();
         _lineRenderer.positionCount = 2;
-        _lineRenderer.startWidth = 0.1f;  // Increased width for better visibility.
-        _lineRenderer.endWidth = 0.1f;
-        // Use an unlit shader so the rope isn’t affected by lighting.
-        _lineRenderer.material = new Material(Shader.Find("Unlit/Color"));
-        _lineRenderer.material.color = Color.white;
-        // Ensure the rope is drawn on top.
-        _lineRenderer.sortingLayerName = "Default";
+        _lineRenderer.startWidth = 0.2f;  // Adjust width as needed.
+        _lineRenderer.endWidth = 0.2f;
+
+        // Use our custom shader to disable depth testing.
+        Material ropeMaterial = new Material(Shader.Find("Custom/AlwaysVisibleUnlit"));
+        ropeMaterial.color = Color.yellow; // Set your preferred color.
+        ropeMaterial.renderQueue = 4000;     // Ensures it's drawn last.
+        _lineRenderer.material = ropeMaterial;
+        
+        // Optional: Set sorting layer/order if needed.
+        _lineRenderer.sortingLayerName = "Overlay";
         _lineRenderer.sortingOrder = 1000;
+
         _lineRenderer.enabled = false;
     }
 
@@ -111,8 +116,8 @@ public class GrapplingHook : MonoBehaviour
         // First, rotate 50° to the left (negative means left rotation).
         Quaternion leftRotation = Quaternion.AngleAxis(-50f, hookCamera.transform.up);
         // Then, tilt down 15° by rotating around the camera's right axis.
-        Quaternion downRotation = Quaternion.AngleAxis(-30f, hookCamera.transform.right);
-        // Combine the rotations (order matters; this applies the down rotation first, then the left rotation).
+        Quaternion downRotation = Quaternion.AngleAxis(15f, hookCamera.transform.right);
+        // Combine the rotations (order matters).
         Quaternion combinedRotation = leftRotation * downRotation;
         // Apply the combined rotation to the original ray's direction.
         Vector3 rotatedDirection = combinedRotation * originalRay.direction;
