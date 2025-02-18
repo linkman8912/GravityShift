@@ -4,8 +4,8 @@ public class GrapplingHook : MonoBehaviour
 {
     [Header("Input Settings")]
     public KeyCode grappleKey = KeyCode.Mouse0;
-    public KeyCode pullKey = KeyCode.LeftControl;
-    public KeyCode cancelKey = KeyCode.E;
+    public KeyCode pullKey = KeyCode.Tab;
+    public KeyCode cancelKey = KeyCode.Q;
 
     [Header("Grapple Settings")]
     public float maxGrappleDistance = 50f;

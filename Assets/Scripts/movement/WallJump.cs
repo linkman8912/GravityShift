@@ -7,7 +7,7 @@ public class WallJumpAndRun : MonoBehaviour
 {
     [Header("Wall Jump Settings")]
     [Tooltip("Distance to check for a wall.")]
-    public float wallCheckDistance = 0.6f;
+    public float wallCheckDistance = 1f;
     
     [Tooltip("Surfaces with a Y normal below this value are considered vertical.")]
     public float wallNormalThreshold = 0.5f;
