@@ -15,12 +15,13 @@ public class GrapplingHook : MonoBehaviour
     public LayerMask grappleLayer;
 
     [Header("Rope Extension Settings")]
-    private float extendSpeed = 0f;
+    [Tooltip("Speed at which the rope automatically extends when falling.")]
+    public float extendSpeed = 5f;
     [Tooltip("Maximum rope length when extended.")]
     public float maxExtendedRopeLength = 70f;
 
     [Header("Swing Settings")]
-    [Tooltip("Extra force applied to send the player symmetrically across the swing.")]
+    [Tooltip("Base extra force applied to swing the player toward the other side of the rope.")]
     public float swingForce = 5f;
 
     [Header("Fall Settings")]
@@ -105,55 +106,39 @@ public class GrapplingHook : MonoBehaviour
     {
         if (_isGrappling)
         {
-            // Calculate vector from the grapple point to the player.
+            // Enforce the rope's length: clamp the player's distance to the grapple point.
             Vector3 toPlayer = transform.position - _grapplePoint;
-            float currentDistance = toPlayer.magnitude;
-            
-            // If the player is beyond the rope's current length, apply a tension force.
-            if (currentDistance > _currentRopeLength)
+            float distance = toPlayer.magnitude;
+            if (distance > _currentRopeLength)
             {
-                float excess = currentDistance - _currentRopeLength;
-                float tensionCoefficient = 10f;  // Tweak this value to adjust tension feel.
-                Vector3 tensionForce = toPlayer.normalized * excess * tensionCoefficient * Time.deltaTime;
-                transform.position -= tensionForce;
+                transform.position = _grapplePoint + toPlayer.normalized * _currentRopeLength;
             }
-            
+
             // Compute vertical velocity.
             float verticalVelocity = (transform.position.y - _prevY) / Time.deltaTime;
             _prevY = transform.position.y;
-            
-            // Allow the rope to extend while falling.
+
+            // Automatically extend the rope when falling.
             if (verticalVelocity < 0)
             {
                 _currentRopeLength += extendSpeed * Time.deltaTime;
                 _currentRopeLength = Mathf.Min(_currentRopeLength, maxExtendedRopeLength);
             }
-            
-            // When near the bottom of the arc, mirror the horizontal offset.
-            // Check if the angle between toPlayer and vertical down is small.
-            float angleFromDown = Vector3.Angle(toPlayer, Vector3.down);
-            if (angleFromDown < 30f)  // Adjust this threshold as needed.
+
+            // When at the rope's end and falling, apply extra lateral swing force.
+            if (distance >= _currentRopeLength - 0.1f && verticalVelocity < 0)
             {
-                // Get the horizontal (XZ) offset relative to the grapple point.
-                Vector3 horizontalOffset = Vector3.ProjectOnPlane(toPlayer, Vector3.up);
-                // Compute the symmetric (mirrored) horizontal offset.
-                Vector3 desiredHorizontalOffset = -horizontalOffset;
-                // To maintain the rope length, compute the vertical component needed.
-                float desiredHorizontalMag = desiredHorizontalOffset.magnitude;
-                float desiredVertical = Mathf.Sqrt(Mathf.Max(0, currentDistance * currentDistance - desiredHorizontalMag * desiredHorizontalMag));
-                // Since the grapple point is above the player, we expect a negative vertical offset.
-                desiredVertical = -Mathf.Abs(desiredVertical);
-                Vector3 desiredPosition = _grapplePoint + desiredHorizontalOffset + new Vector3(0, desiredVertical, 0);
-                
-                // Compute the adjustment vector toward the desired symmetric position.
-                Vector3 swingAdjustment = desiredPosition - transform.position;
-                float swingAdjustmentFactor = swingForce * Time.deltaTime; // Tweak this factor as needed.
-                transform.position += swingAdjustment * swingAdjustmentFactor;
+                Vector3 ropeDir = (transform.position - _grapplePoint).normalized;
+                Vector3 tangential = Vector3.down - Vector3.Dot(Vector3.down, ropeDir) * ropeDir;
+                if (tangential.sqrMagnitude > 0.001f)
+                {
+                    tangential.Normalize();
+                    // Calculate a multiplier based on falling speed.
+                    // For example, if falling faster (more negative verticalVelocity), increase swing force.
+                    float multiplier = 1f + Mathf.Clamp(-verticalVelocity, 0f, 20f) / 10f;
+                    transform.position += tangential * swingForce * multiplier * Time.deltaTime;
+                }
             }
-            
-            // Update the rope visualization.
-            _lineRenderer.SetPosition(0, ropeOrigin.position);
-            _lineRenderer.SetPosition(1, _grapplePoint);
         }
     }
 
@@ -175,7 +160,7 @@ public class GrapplingHook : MonoBehaviour
             _grapplePoint = hit.point;
             _currentRopeLength = Vector3.Distance(transform.position, _grapplePoint);
             _lineRenderer.enabled = true;
-            // While grappling, leave _surfCharacter.isGrappling false for full momentum control.
+            // Let the SurfCharacter operate normally while grappling.
             Debug.Log("Grapple hit: " + hit.collider.name);
         }
         else
@@ -190,11 +175,11 @@ public class GrapplingHook : MonoBehaviour
         _lineRenderer.enabled = false;
         if (_surfCharacter != null)
         {
-            // Immediately cancel falling momentum on the same frame the grapple is released.
+            // Immediately cancel falling momentum on the same frame of grapple release.
             Vector3 vel = _surfCharacter.moveData.velocity;
             vel.y = resetVerticalVelocity;
             _surfCharacter.moveData.velocity = vel;
-            // Immediately clear the flag.
+            // No delayed flag: SurfCharacter.isGrappling remains false.
             _surfCharacter.isGrappling = false;
         }
     }

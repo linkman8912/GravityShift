@@ -7,7 +7,7 @@ public class WallJumpAndRun : MonoBehaviour
 {
     [Header("Wall Jump Settings")]
     [Tooltip("Distance to check for a wall.")]
-    public float wallCheckDistance = 1f;
+    public float wallCheckDistance = 0.6f;
     
     [Tooltip("Surfaces with a Y normal below this value are considered vertical.")]
     public float wallNormalThreshold = 0.5f;
@@ -95,7 +95,7 @@ public class WallJumpAndRun : MonoBehaviour
                     }
                     else
                     {
-                        // Use fixed lateral force based on wall relative to player.
+                        // Use fixed lateral force based on wall relative to the player.
                         float dot = Vector3.Dot(wallNormal, transform.right);
                         Vector3 lateralImpulse = (dot > 0f ? transform.right : -transform.right) * wallJumpHorizontalForce;
                         jumpVelocity = Vector3.up * wallJumpUpForce + lateralImpulse;
@@ -115,24 +115,29 @@ public class WallJumpAndRun : MonoBehaviour
         }
         
         // --- WALL RUN LOGIC ---
-        // Check if the player is airborne.
-        if (!IsGrounded())
+        // Prevent wall runs if the player is on the ground.
+        if (IsGrounded())
+        {
+            _isWallRunning = false;
+            _wallRunDelayTimer = 0f;
+        }
+        else
         {
             Vector3 detectedWallNormal;
             if (CheckForWall(out detectedWallNormal))
             {
-                // Increment the delay timer regardless of movement input.
+                // Increment the delay timer unconditionally.
                 _wallRunDelayTimer += Time.deltaTime;
                 
                 if (_wallRunDelayTimer >= wallRunDelay)
                 {
                     if (!_isWallRunning)
                     {
-                        // Begin wall run.
+                        // Start the wall run.
                         _isWallRunning = true;
                         _wallRunTimer = wallRunDuration;
                         _currentWallNormal = detectedWallNormal;
-                        // Calculate the wall run direction (the tangent to the wall).
+                        // Calculate the wall run direction as the tangent to the wall.
                         Vector3 candidate = Vector3.Cross(_currentWallNormal, Vector3.up);
                         if (Vector3.Dot(candidate, transform.forward) < 0)
                         {
@@ -145,51 +150,38 @@ public class WallJumpAndRun : MonoBehaviour
                         _initialWallRunSpeed = horizontalVel.magnitude;
                     }
                 }
-            }
-            else
-            {
-                // If no wall is detected, cancel wall running.
-                _isWallRunning = false;
-                _wallRunDelayTimer = 0f;
-            }
-        }
-        else
-        {
-            // If grounded, cancel wall run and reset delay.
-            _isWallRunning = false;
-            _wallRunDelayTimer = 0f;
-        }
-        
-        // If currently wall running, check if the wall is still present and update timer.
-        if (_isWallRunning)
-        {
-            // Check if a wall is still detected.
-            Vector3 tempWallNormal;
-            if (!CheckForWall(out tempWallNormal))
-            {
-                // Lost the wall—cancel wall run.
-                _isWallRunning = false;
-                _wallRunDelayTimer = 0f;
-            }
-            else
-            {
-                // Decrement the wall run timer.
-                _wallRunTimer -= Time.deltaTime;
-                if (_wallRunTimer <= 0f)
+                // If no wall is detected, cancel wall run.
+                else
                 {
                     _isWallRunning = false;
                 }
-                else
-                {
-                    // Calculate effective speed: ensure at least minWallRunSpeed, and add any extra momentum.
-                    float effectiveSpeed = minWallRunSpeed + 
-                        wallRunSpeedBonusMultiplier * Mathf.Max(0f, _initialWallRunSpeed - minWallRunSpeed);
-                    // Preserve vertical velocity (with gravity reduction) and apply horizontal effective speed.
-                    Vector3 currentVel = _surfCharacter.moveData.velocity;
-                    float preservedUpward = currentVel.y;
-                    _surfCharacter.moveData.velocity = _wallRunDirection * effectiveSpeed + 
-                        Vector3.up * (preservedUpward * wallRunGravityReduction);
-                }
+            }
+            else
+            {
+                _isWallRunning = false;
+                _wallRunDelayTimer = 0f;
+            }
+        }
+        
+        // If wall running, update the timer and override movement.
+        if (_isWallRunning)
+        {
+            _wallRunTimer -= Time.deltaTime;
+            if (_wallRunTimer <= 0f)
+            {
+                _isWallRunning = false;
+            }
+            else
+            {
+                // Calculate effective speed:
+                // Ensure it's at least minWallRunSpeed, and add extra momentum above minimum.
+                float effectiveSpeed = minWallRunSpeed + 
+                    wallRunSpeedBonusMultiplier * Mathf.Max(0f, _initialWallRunSpeed - minWallRunSpeed);
+                // Preserve vertical velocity (with gravity reduction) and apply effectiveSpeed horizontally.
+                Vector3 currentVel = _surfCharacter.moveData.velocity;
+                float preservedUpward = currentVel.y;
+                _surfCharacter.moveData.velocity = _wallRunDirection * effectiveSpeed + 
+                    Vector3.up * (preservedUpward * wallRunGravityReduction);
             }
         }
         
