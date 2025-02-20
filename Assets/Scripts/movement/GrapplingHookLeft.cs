@@ -1,7 +1,7 @@
 using UnityEngine;
 using Fragsurf.Movement;  // Ensure this matches your project's namespace
 
-public class GrapplingHook : MonoBehaviour
+public class GrapplingHookLeft : MonoBehaviour
 {
     [Header("Input Settings")]
     public KeyCode grappleKey = KeyCode.Mouse0;
@@ -43,6 +43,7 @@ public class GrapplingHook : MonoBehaviour
     // Components
     private LineRenderer _lineRenderer;
     private SurfCharacter _surfCharacter;
+    private GravityOrbShooter _orbShooter; // Reference to GravityOrbShooter
 
     void Start()
     {
@@ -50,7 +51,7 @@ public class GrapplingHook : MonoBehaviour
         if (hookCamera == null)
             hookCamera = Camera.main;
         if (hookCamera == null)
-            Debug.LogError("GrapplingHook: No camera assigned.");
+            Debug.LogError("GrapplingHookLeft: No camera assigned.");
 
         // Default rope origin to the camera's transform if not set.
         if (ropeOrigin == null)
@@ -73,14 +74,22 @@ public class GrapplingHook : MonoBehaviour
         // Get a reference to the SurfCharacter component.
         _surfCharacter = GetComponent<SurfCharacter>();
         if (_surfCharacter == null)
-            Debug.LogWarning("GrapplingHook: SurfCharacter component not found on this GameObject.");
+            Debug.LogWarning("GrapplingHookLeft: SurfCharacter component not found on this GameObject.");
+
+        // Get reference to GravityOrbShooter.
+        _orbShooter = FindObjectOfType<GravityOrbShooter>();
     }
 
     void Update()
     {
-        // Start grappling when the grapple key is pressed.
+        // Only try to grapple if the left click is pressed and no orb is held,
+        // and also if the left click wasn't consumed by the orb shooter.
         if (Input.GetKeyDown(grappleKey))
+        {
+            if ((_orbShooter != null && _orbShooter.IsOrbHeld) || GravityOrbShooter.leftClickConsumed)
+                return;
             TryStartGrapple();
+        }
 
         // Release the grapple when the cancel key is pressed.
         if (_isGrappling && Input.GetKeyDown(cancelKey))
@@ -100,6 +109,9 @@ public class GrapplingHook : MonoBehaviour
             _lineRenderer.SetPosition(0, ropeOrigin.position);
             _lineRenderer.SetPosition(1, _grapplePoint);
         }
+
+        // Option 2: Reset the consumed flag at the end of Update.
+        GravityOrbShooter.leftClickConsumed = false;
     }
 
     void LateUpdate()
@@ -133,8 +145,6 @@ public class GrapplingHook : MonoBehaviour
                 if (tangential.sqrMagnitude > 0.001f)
                 {
                     tangential.Normalize();
-                    // Calculate a multiplier based on falling speed.
-                    // For example, if falling faster (more negative verticalVelocity), increase swing force.
                     float multiplier = 1f + Mathf.Clamp(-verticalVelocity, 0f, 20f) / 10f;
                     transform.position += tangential * swingForce * multiplier * Time.deltaTime;
                 }
@@ -146,7 +156,7 @@ public class GrapplingHook : MonoBehaviour
     {
         if (hookCamera == null)
         {
-            Debug.LogWarning("GrapplingHook: No camera assigned.");
+            Debug.LogWarning("GrapplingHookLeft: No camera assigned.");
             return;
         }
 
@@ -160,7 +170,6 @@ public class GrapplingHook : MonoBehaviour
             _grapplePoint = hit.point;
             _currentRopeLength = Vector3.Distance(transform.position, _grapplePoint);
             _lineRenderer.enabled = true;
-            // Let the SurfCharacter operate normally while grappling.
             Debug.Log("Grapple hit: " + hit.collider.name);
         }
         else
@@ -175,11 +184,9 @@ public class GrapplingHook : MonoBehaviour
         _lineRenderer.enabled = false;
         if (_surfCharacter != null)
         {
-            // Immediately cancel falling momentum on the same frame of grapple release.
             Vector3 vel = _surfCharacter.moveData.velocity;
             vel.y = resetVerticalVelocity;
             _surfCharacter.moveData.velocity = vel;
-            // No delayed flag: SurfCharacter.isGrappling remains false.
             _surfCharacter.isGrappling = false;
         }
     }

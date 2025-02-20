@@ -49,7 +49,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   lifeTime: 20
-  effectRadius: 15
+  effectRadius: 25
   pullForce: 50
   pushForce: 30
   isPull: 1

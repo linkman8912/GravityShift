@@ -27,6 +27,15 @@ public class GravityOrbShooter : MonoBehaviour
     // Holds a reference to the currently summoned orb.
     private GameObject activeOrb = null;
 
+    // Public property to indicate if an orb is currently held.
+    public bool IsOrbHeld
+    {
+        get { return activeOrb != null; }
+    }
+
+    // Option 2: Shared flag to indicate left-click input has been consumed.
+    public static bool leftClickConsumed = false;
+
     private void Start()
     {
         if (aimTransform == null)
@@ -44,22 +53,25 @@ public class GravityOrbShooter : MonoBehaviour
 
     private void Update()
     {
-        if (activeOrb == null)
+        if (activeOrb != null)
         {
-            if (Input.GetKeyDown(summonKey))
-            {
-                SummonOrb();
-            }
-        }
-        else
-        {
+            // If orb is held, listen for left click to fire it.
             if (Input.GetKeyDown(pullKey))
             {
                 FireOrb(true);
+                leftClickConsumed = true;
             }
             else if (Input.GetKeyDown(pushKey))
             {
                 FireOrb(false);
+                leftClickConsumed = true;
+            }
+        }
+        else
+        {
+            if (Input.GetKeyDown(summonKey))
+            {
+                SummonOrb();
             }
         }
     }
@@ -84,7 +96,7 @@ public class GravityOrbShooter : MonoBehaviour
         GravityOrb orbScript = activeOrb.GetComponent<GravityOrb>();
         if (orbScript != null)
         {
-            orbScript.isHeld = true; // Mark as held so collisions while in the holder activate push mode.
+            orbScript.isHeld = true;
         }
     }
 

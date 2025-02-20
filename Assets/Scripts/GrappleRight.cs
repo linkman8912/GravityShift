@@ -13,7 +13,7 @@ public class GrappleRight : MonoBehaviour
 
     [Header("Grapple Behavior Settings")]
     [Tooltip("If an object’s layer is in this mask, the grapple will attach to its center instead of the hit point.")]
-    public LayerMask centerGrappleLayer; // <-- New layer mask for center grappling
+    public LayerMask centerGrappleLayer; // New layer mask for center grappling
 
     [Header("References")]
     public Camera playerCamera;
@@ -24,9 +24,28 @@ public class GrappleRight : MonoBehaviour
     public Color validTargetColor = Color.green;
     public Color invalidTargetColor = Color.red;
 
+    // Private state
     private List<GrapplePair> activeGrapples = new List<GrapplePair>();
     private RaycastHit firstHit;
     private bool isFirstTargetSelected = false;
+
+    // Reference to GravityOrbShooter to check orb state.
+    private GravityOrbShooter _orbShooter;
+
+    void Start()
+    {
+        // Get reference to GravityOrbShooter in the scene.
+        _orbShooter = FindObjectOfType<GravityOrbShooter>();
+
+        if (playerCamera == null)
+        {
+            playerCamera = Camera.main;
+            if (playerCamera == null)
+            {
+                Debug.LogError("GrappleRight: No camera assigned and no main camera found.");
+            }
+        }
+    }
 
     void Update()
     {
@@ -37,20 +56,24 @@ public class GrappleRight : MonoBehaviour
 
     void HandleGrappleInput()
     {
+        // Prevent grapple input if an orb is held or if the orb shooter consumed the right-click.
+        if ((_orbShooter != null && _orbShooter.IsOrbHeld) || GravityOrbShooter.leftClickConsumed)
+            return;
+
         if (Input.GetMouseButtonDown(1))
         {
             if (Physics.Raycast(playerCamera.transform.position,
-                              playerCamera.transform.forward,
-                              out RaycastHit hit,
-                              maxGrappleDistance,
-                              grappleLayer))
+                                  playerCamera.transform.forward,
+                                  out RaycastHit hit,
+                                  maxGrappleDistance,
+                                  grappleLayer))
             {
                 if (enableDebug)
                 {
                     Debug.Log("Raycast hit: " + hit.collider.name);
                     Debug.DrawRay(playerCamera.transform.position,
-                                playerCamera.transform.forward * hit.distance,
-                                validTargetColor, 0.1f);
+                                  playerCamera.transform.forward * hit.distance,
+                                  validTargetColor, 0.1f);
                 }
 
                 if (hit.rigidbody != null && !hit.rigidbody.isKinematic)
@@ -59,11 +82,13 @@ public class GrappleRight : MonoBehaviour
                     {
                         firstHit = hit;
                         isFirstTargetSelected = true;
-                        if (enableDebug) Debug.Log($"FIRST TARGET SET: {hit.collider.name} at {hit.point}");
+                        if (enableDebug)
+                            Debug.Log($"FIRST TARGET SET: {hit.collider.name} at {hit.point}");
                     }
                     else
                     {
-                        if (enableDebug) Debug.Log($"CREATING CONNECTION BETWEEN: {firstHit.collider.name} and {hit.collider.name}");
+                        if (enableDebug)
+                            Debug.Log($"CREATING CONNECTION BETWEEN: {firstHit.collider.name} and {hit.collider.name}");
                         CreateGrappleConnection(firstHit, hit);
                         isFirstTargetSelected = false;
                     }
@@ -80,8 +105,8 @@ public class GrappleRight : MonoBehaviour
                 if (enableDebug)
                 {
                     Debug.DrawRay(playerCamera.transform.position,
-                                playerCamera.transform.forward * maxGrappleDistance,
-                                invalidTargetColor, 0.1f);
+                                  playerCamera.transform.forward * maxGrappleDistance,
+                                  invalidTargetColor, 0.1f);
 
                     if (isFirstTargetSelected)
                     {
@@ -104,15 +129,12 @@ public class GrappleRight : MonoBehaviour
         spring.spring = springForce;
         spring.damper = damperForce;
         spring.autoConfigureConnectedAnchor = false;
+        spring.enableCollision = true; // Enable collisions between connected bodies
 
-        // CRITICAL FIX: Enable collisions between connected bodies
-        spring.enableCollision = true; // ← This line fixes the collision issue
-
-        // Determine the local anchor point for the first object
+        // Determine the local anchor point for the first object.
         Vector3 localHitPointA;
         if ((centerGrappleLayer.value & (1 << startHit.collider.gameObject.layer)) != 0)
         {
-            // Use the object's center (in local space, that's (0,0,0))
             localHitPointA = Vector3.zero;
             if (enableDebug) Debug.Log($"Using center for {startHit.collider.name}");
         }
@@ -122,11 +144,10 @@ public class GrappleRight : MonoBehaviour
         }
         spring.anchor = localHitPointA;
 
-        // Determine the local anchor point for the second object
+        // Determine the local anchor point for the second object.
         Vector3 localHitPointB;
         if ((centerGrappleLayer.value & (1 << endHit.collider.gameObject.layer)) != 0)
         {
-            // Use the object's center
             localHitPointB = Vector3.zero;
             if (enableDebug) Debug.Log($"Using center for {endHit.collider.name}");
         }
@@ -136,7 +157,7 @@ public class GrappleRight : MonoBehaviour
         }
         spring.connectedAnchor = localHitPointB;
 
-        // Create a line renderer to visualize the grapple
+        // Create a line renderer to visualize the grapple.
         LineRenderer lr = new GameObject("GrappleLine").AddComponent<LineRenderer>();
         lr.positionCount = 2;
         lr.material = lineMaterial;
@@ -153,9 +174,9 @@ public class GrappleRight : MonoBehaviour
         if (enableDebug)
         {
             Debug.Log($"New Grapple Created!\n" +
-                    $"Object A: {startHit.collider.name} (Mass: {startHit.rigidbody.mass})\n" +
-                    $"Object B: {endHit.collider.name} (Mass: {endHit.rigidbody.mass})\n" +
-                    $"Anchor Points:\nA: {spring.anchor}\nB: {spring.connectedAnchor}");
+                      $"Object A: {startHit.collider.name} (Mass: {startHit.rigidbody.mass})\n" +
+                      $"Object B: {endHit.collider.name} (Mass: {endHit.rigidbody.mass})\n" +
+                      $"Anchor Points:\nA: {spring.anchor}\nB: {spring.connectedAnchor}");
         }
     }
 
@@ -163,11 +184,13 @@ public class GrappleRight : MonoBehaviour
     {
         if (Input.GetKeyDown(releaseKey))
         {
-            if (enableDebug) Debug.Log($"Releasing all ({activeGrapples.Count}) grapples");
+            if (enableDebug)
+                Debug.Log($"Releasing all ({activeGrapples.Count}) grapples");
 
             foreach (GrapplePair pair in activeGrapples)
             {
-                if (enableDebug) Debug.Log($"Removing connection: {pair.objectA.name} <-> {pair.objectB.name}");
+                if (enableDebug)
+                    Debug.Log($"Removing connection: {pair.objectA.name} <-> {pair.objectB.name}");
 
                 if (pair.springJoint != null)
                     Destroy(pair.springJoint);
