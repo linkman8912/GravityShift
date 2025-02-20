@@ -118,12 +118,29 @@ public class GrapplingHookLeft : MonoBehaviour
     {
         if (_isGrappling)
         {
-            // Enforce the rope's length: clamp the player's distance to the grapple point.
+            // Calculate vector from grapple point to player.
             Vector3 toPlayer = transform.position - _grapplePoint;
             float distance = toPlayer.magnitude;
+
+            // If the player is farther than the current rope length...
             if (distance > _currentRopeLength)
             {
-                transform.position = _grapplePoint + toPlayer.normalized * _currentRopeLength;
+                // Compute where the player should ideally be.
+                Vector3 desiredPosition = _grapplePoint + toPlayer.normalized * _currentRopeLength;
+                RaycastHit hit;
+
+                // Use a linecast to detect any obstacles between the current position and desired position.
+                if (Physics.Linecast(transform.position, desiredPosition, out hit))
+                {
+                    // If an obstacle is hit, move the player to just before the obstacle.
+                    float safeOffset = 0.1f;
+                    transform.position = hit.point - toPlayer.normalized * safeOffset;
+                }
+                else
+                {
+                    // If no obstacle is found, move directly to the desired position.
+                    transform.position = desiredPosition;
+                }
             }
 
             // Compute vertical velocity.
@@ -137,7 +154,7 @@ public class GrapplingHookLeft : MonoBehaviour
                 _currentRopeLength = Mathf.Min(_currentRopeLength, maxExtendedRopeLength);
             }
 
-            // When at the rope's end and falling, apply extra lateral swing force.
+            // Apply extra lateral swing force when at the rope's end and falling.
             if (distance >= _currentRopeLength - 0.1f && verticalVelocity < 0)
             {
                 Vector3 ropeDir = (transform.position - _grapplePoint).normalized;
@@ -184,6 +201,10 @@ public class GrapplingHookLeft : MonoBehaviour
         _lineRenderer.enabled = false;
         if (_surfCharacter != null)
         {
+<<<<<<< HEAD
+=======
+            // Cancel falling momentum by resetting vertical velocity.
+>>>>>>> 0efeb5114e7847e2d14ee1cc6e896118aa6c7805
             Vector3 vel = _surfCharacter.moveData.velocity;
             vel.y = resetVerticalVelocity;
             _surfCharacter.moveData.velocity = vel;

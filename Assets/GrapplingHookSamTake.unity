@@ -1128,11 +1128,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   grappleKey: 323
-  pullKey: 304
+  pullKey: 9
   cancelKey: 113
+<<<<<<< HEAD
   maxGrappleDistance: 150
   pullSpeed: 30
   minRopeLength: 0.1
+=======
+  maxGrappleDistance: 100
+  pullSpeed: 30
+  minRopeLength: 2
+>>>>>>> 0efeb5114e7847e2d14ee1cc6e896118aa6c7805
   grappleLayer:
     serializedVersion: 2
     m_Bits: 4294967295
