@@ -17,10 +17,13 @@ public class GravityOrb : MonoBehaviour
     public float pushForce = 50f;
 
     [Tooltip("If true, the orb pulls objects in; if false, it pushes objects away.")]
-    public bool isPull = true;
+    public bool isPull = false;  // Default is push mode
 
     [Tooltip("Duration (in seconds) for which the orb continuously applies its force after collision.")]
     public float effectDuration = 2f;
+
+    [Tooltip("Indicates whether the orb is still held (i.e., not fired yet).")]
+    public bool isHeld = false;
 
     private Rigidbody _rb;
     private bool _effectTriggered = false;
@@ -32,15 +35,29 @@ public class GravityOrb : MonoBehaviour
 
     private void Start()
     {
-        // Ensure the orb is destroyed after its lifetime expires.
+        // Auto-destroy after lifeTime seconds.
         Destroy(gameObject, lifeTime);
     }
 
     private void OnCollisionEnter(Collision collision)
     {
+        // If the orb is held and it collides, we activate it without detaching from the holder.
+        if (isHeld)
+        {
+            // Force push mode.
+            isPull = false;
+            // Only start the effect if not already triggered.
+            if (!_effectTriggered)
+            {
+                TriggerGravityEffect();
+            }
+            // Do not detach: the orb remains with the holder.
+            return;
+        }
+
+        // For orbs that have been fired, detach them on collision.
         if (!_effectTriggered)
         {
-            // Optionally stop movement on collision.
             if (_rb != null)
             {
                 _rb.velocity = Vector3.zero;
@@ -51,7 +68,7 @@ public class GravityOrb : MonoBehaviour
     }
 
     /// <summary>
-    /// Begins applying continuous force for the specified effectDuration.
+    /// Begins applying continuous force for effectDuration.
     /// </summary>
     public void TriggerGravityEffect()
     {
@@ -65,19 +82,16 @@ public class GravityOrb : MonoBehaviour
         WaitForFixedUpdate wait = new WaitForFixedUpdate();
         while (elapsed < effectDuration)
         {
-            // Use OverlapSphere to detect nearby objects.
             Collider[] hitColliders = Physics.OverlapSphere(transform.position, effectRadius);
             foreach (Collider col in hitColliders)
             {
                 Rigidbody otherRb = col.GetComponent<Rigidbody>();
-                // Skip if no Rigidbody or if it's our own Rigidbody.
                 if (otherRb != null && otherRb != _rb)
                 {
                     Vector3 direction = isPull ?
                         (transform.position - otherRb.transform.position).normalized :
                         (otherRb.transform.position - transform.position).normalized;
                     float force = isPull ? pullForce : pushForce;
-                    // Apply force continuously.
                     otherRb.AddForce(direction * force, ForceMode.Force);
                 }
             }
