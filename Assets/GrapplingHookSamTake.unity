@@ -596,15 +596,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   grappleKey: 323
-  pullKey: 304
+  pullKey: 9
   cancelKey: 113
-  maxGrappleDistance: 50
-  pullSpeed: 10
+  maxGrappleDistance: 100
+  pullSpeed: 30
   minRopeLength: 2
   grappleLayer:
     serializedVersion: 2
     m_Bits: 4294967295
-  extendSpeed: 5
+  extendSpeed: 0
   maxExtendedRopeLength: 70
   swingForce: 5
   resetVerticalVelocity: 0

@@ -106,12 +106,29 @@ public class GrapplingHook : MonoBehaviour
     {
         if (_isGrappling)
         {
-            // Enforce the rope's length: clamp the player's distance to the grapple point.
+            // Calculate vector from grapple point to player.
             Vector3 toPlayer = transform.position - _grapplePoint;
             float distance = toPlayer.magnitude;
+
+            // If the player is farther than the current rope length...
             if (distance > _currentRopeLength)
             {
-                transform.position = _grapplePoint + toPlayer.normalized * _currentRopeLength;
+                // Compute where the player should ideally be.
+                Vector3 desiredPosition = _grapplePoint + toPlayer.normalized * _currentRopeLength;
+                RaycastHit hit;
+
+                // Use a linecast to detect any obstacles between the current position and desired position.
+                if (Physics.Linecast(transform.position, desiredPosition, out hit))
+                {
+                    // If an obstacle is hit, move the player to just before the obstacle.
+                    float safeOffset = 0.1f;
+                    transform.position = hit.point - toPlayer.normalized * safeOffset;
+                }
+                else
+                {
+                    // If no obstacle is found, move directly to the desired position.
+                    transform.position = desiredPosition;
+                }
             }
 
             // Compute vertical velocity.
@@ -125,7 +142,7 @@ public class GrapplingHook : MonoBehaviour
                 _currentRopeLength = Mathf.Min(_currentRopeLength, maxExtendedRopeLength);
             }
 
-            // When at the rope's end and falling, apply extra lateral swing force.
+            // Apply extra lateral swing force when at the rope's end and falling.
             if (distance >= _currentRopeLength - 0.1f && verticalVelocity < 0)
             {
                 Vector3 ropeDir = (transform.position - _grapplePoint).normalized;
@@ -133,8 +150,6 @@ public class GrapplingHook : MonoBehaviour
                 if (tangential.sqrMagnitude > 0.001f)
                 {
                     tangential.Normalize();
-                    // Calculate a multiplier based on falling speed.
-                    // For example, if falling faster (more negative verticalVelocity), increase swing force.
                     float multiplier = 1f + Mathf.Clamp(-verticalVelocity, 0f, 20f) / 10f;
                     transform.position += tangential * swingForce * multiplier * Time.deltaTime;
                 }
@@ -160,7 +175,6 @@ public class GrapplingHook : MonoBehaviour
             _grapplePoint = hit.point;
             _currentRopeLength = Vector3.Distance(transform.position, _grapplePoint);
             _lineRenderer.enabled = true;
-            // Let the SurfCharacter operate normally while grappling.
             Debug.Log("Grapple hit: " + hit.collider.name);
         }
         else
@@ -175,11 +189,10 @@ public class GrapplingHook : MonoBehaviour
         _lineRenderer.enabled = false;
         if (_surfCharacter != null)
         {
-            // Immediately cancel falling momentum on the same frame of grapple release.
+            // Cancel falling momentum by resetting vertical velocity.
             Vector3 vel = _surfCharacter.moveData.velocity;
             vel.y = resetVerticalVelocity;
             _surfCharacter.moveData.velocity = vel;
-            // No delayed flag: SurfCharacter.isGrappling remains false.
             _surfCharacter.isGrappling = false;
         }
     }
