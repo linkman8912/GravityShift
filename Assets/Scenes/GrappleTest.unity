@@ -259,14 +259,16 @@ MonoBehaviour:
   maxGrappleDistance: 50
   springForce: 8
   damperForce: 4
-  connectionSpeed: 0.1
   grappleLayer:
     serializedVersion: 2
     m_Bits: 72
-  lineMaterial: {fileID: 2100000, guid: b804ad83c5f6039448e1e249bea11fd1, type: 2}
+  anchorLayer:
+    serializedVersion: 2
+    m_Bits: 0
   centerGrappleLayer:
     serializedVersion: 2
     m_Bits: 8
+  lineMaterial: {fileID: 2100000, guid: b804ad83c5f6039448e1e249bea11fd1, type: 2}
   playerCamera: {fileID: 1547831957}
   releaseKey: 114
   enableDebug: 1
@@ -423,6 +425,16 @@ PrefabInstance:
         type: 3}
       propertyPath: grappleLayer.m_Bits
       value: 4294967295
+      objectReference: {fileID: 0}
+    - target: {fileID: 2658302626222825065, guid: 47a5a08471625cb46bce68af165f2b70,
+        type: 3}
+      propertyPath: maxYRotation
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 2658302626222825065, guid: 47a5a08471625cb46bce68af165f2b70,
+        type: 3}
+      propertyPath: minYRotation
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
