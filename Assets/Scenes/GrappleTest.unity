@@ -426,16 +426,6 @@ PrefabInstance:
       propertyPath: grappleLayer.m_Bits
       value: 4294967295
       objectReference: {fileID: 0}
-    - target: {fileID: 2658302626222825065, guid: 47a5a08471625cb46bce68af165f2b70,
-        type: 3}
-      propertyPath: maxYRotation
-      value: 50
-      objectReference: {fileID: 0}
-    - target: {fileID: 2658302626222825065, guid: 47a5a08471625cb46bce68af165f2b70,
-        type: 3}
-      propertyPath: minYRotation
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       propertyPath: m_Name
@@ -521,6 +511,7 @@ PrefabInstance:
     - {fileID: 5977915042297098156, guid: 47a5a08471625cb46bce68af165f2b70, type: 3}
     - {fileID: 5204267128936070021, guid: 47a5a08471625cb46bce68af165f2b70, type: 3}
     - {fileID: 100479502347439184, guid: 47a5a08471625cb46bce68af165f2b70, type: 3}
+    - {fileID: 2658302626222825065, guid: 47a5a08471625cb46bce68af165f2b70, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:

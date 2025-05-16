@@ -50,7 +50,7 @@ public class PlayerAiming : MonoBehaviour
 		float yMovement = -Input.GetAxisRaw("Mouse Y") * verticalSensitivity  * sensitivityMultiplier;
 
 		// Calculate real rotation from input
-		realRotation   = new Vector3(Mathf.Clamp(realRotation.x + yMovement, minYRotation, maxYRotation), realRotation.y + xMovement, realRotation.z);
+		//realRotation   = new Vector3(Mathf.Clamp(realRotation.x + yMovement, minYRotation, maxYRotation), realRotation.y + xMovement, realRotation.z);
 		realRotation.z = Mathf.Lerp(realRotation.z, 0f, Time.deltaTime * 3f);
 
 		//Apply real rotation to body
