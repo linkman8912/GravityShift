@@ -512,15 +512,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       insertIndex: -1
+      addedObject: {fileID: 2022133103}
+    - targetCorrespondingSourceObject: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
+        type: 3}
+      insertIndex: -1
       addedObject: {fileID: 2022133102}
     - targetCorrespondingSourceObject: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 2022133101}
-    - targetCorrespondingSourceObject: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2022133104}
     - targetCorrespondingSourceObject: {fileID: 3987954322617379118, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       insertIndex: -1
@@ -871,9 +871,9 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 112
   m_CollisionDetection: 0
---- !u!114 &2022133104
+--- !u!114 &2022133103
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -882,12 +882,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 2022133096}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70487bcf0b8b594e8884339be4aaa2e0, type: 3}
+  m_Script: {fileID: 11500000, guid: aceb432a5a7d155449fa473523e86e28, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   playerCam: {fileID: 1547831960}
   orientation: {fileID: 2022133097}
-  moveSpeed: 4500
+  moveSpeed: 1000
   maxSpeed: 20
   grounded: 0
   whatIsGround:
@@ -897,7 +897,7 @@ MonoBehaviour:
   maxSlopeAngle: 35
   slideForce: 400
   slideCounterMovement: 0.2
-  jumpForce: 500
+  jumpForce: 550
 --- !u!1001 &578493132363122840
 PrefabInstance:
   m_ObjectHideFlags: 0

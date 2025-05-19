@@ -3,7 +3,7 @@
 using System;
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour {
+public class NewPlayerMovement : MonoBehaviour {
 
   //Assignables
   public Transform playerCam;
@@ -171,37 +171,6 @@ public class PlayerMovement : MonoBehaviour {
   private float desiredX;
   private float yaw;
   private float newDesiredX;
-  private void Look() {
-    float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime * sensMultiplier;
-    float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime * sensMultiplier;
-
-    //Find current look rotation
-    Vector3 rot = playerCam.transform.localRotation.eulerAngles;
-    desiredX = rot.y + mouseX/2;
-    newDesiredX = rot.y + mouseX;
-
-    totalMouseX += mouseX;
-
-    yaw += mouseX;
-
-    //Rotate, and also make sure we don't over- or under-rotate.
-    xRotation -= mouseY;
-    xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-
-    // Perform the rotations
-    //playerCam.transform.localRotation = Quaternion.Euler(xRotation, newDesiredX, 0);
-    //orientation.transform.localRotation = Quaternion.Euler(0, newDesiredX, 0);
-    // orientation.transform.localRotation = Quaternion.Euler(0, playerCam.transform.localRotation.eulerAngles.y, 0);
-
-    playerCam.localRotation = Quaternion.Euler(xRotation, yaw, 0);
-    //playerCam.localRotation = Quaternion.Euler(xRotation, 0, 0);
-    orientation.localRotation = Quaternion.Euler(0, yaw, 0);
-
-    // new fix:
-    //playerCam.localRotation = Quaternion.Euler(xRotation, 0, 0);
-    //transform.Rotate(Vector3.up, mouseX);
-    orientation.rotation = Quaternion.Euler(0, transform.eulerAngles.y, 0);
-  }
 
   private void CounterMovement(float x, float y, Vector2 mag) {
     if (!grounded || jumping) return;
@@ -233,20 +202,6 @@ public class PlayerMovement : MonoBehaviour {
   /// Useful for vectors calculations regarding movement and limiting movement
   /// </summary>
   /// <returns></returns>
-  public Vector2 FindVelRelativeToLook() {
-    //float lookAngle = orientation.transform.eulerAngles.y;
-    float lookAngle = yaw*2;
-    float moveAngle = Mathf.Atan2(rb.velocity.x, rb.velocity.z) * Mathf.Rad2Deg;
-
-    float u = Mathf.DeltaAngle(lookAngle, moveAngle);
-    float v = 90 - u;
-
-    float magnitue = rb.velocity.magnitude;
-    float yMag = magnitue * Mathf.Cos(u * Mathf.Deg2Rad);
-    float xMag = magnitue * Mathf.Cos(v * Mathf.Deg2Rad);
-
-    return new Vector2(xMag, yMag);
-  }
 
   private bool IsFloor(Vector3 v) {
     float angle = Vector3.Angle(Vector3.up, v);
@@ -285,6 +240,30 @@ public class PlayerMovement : MonoBehaviour {
 
   private void StopGrounded() {
     grounded = false;
+  }
+
+
+  private void Look() {
+    float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime * sensMultiplier;
+    float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime * sensMultiplier;
+
+    // -- pitch
+    xRotation = Mathf.Clamp(xRotation - mouseY, -90f, 90f);
+    playerCam.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+
+    // -- yaw
+    // Rotate the player body itself
+    //transform.Rotate(Vector3.up, mouseX);
+    // Keep your "orientation" object in sync
+    //orientation.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+    //attempt:
+    orientation.Rotate(Vector3.up, mouseX);
+    orientation.rotation = Quaternion.Euler(0f, orientation.eulerAngles.y, 0f);
+  }
+
+  public Vector2 FindVelRelativeToLook() {
+    Vector3 localVel = orientation.InverseTransformDirection(rb.velocity);
+    return new Vector2(localVel.x, localVel.z);
   }
 
 }
