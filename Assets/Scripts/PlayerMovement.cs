@@ -20,8 +20,10 @@ public class NewPlayerMovement : MonoBehaviour {
   //Movement
   public float moveSpeed = 7f;
   public float maxSpeed = 6f;
+  public float velocityCap = 1500f;
   public bool grounded;
   public LayerMask whatIsGround;
+  public float groundDrag = 3;
 
   public float counterMovement = 0.175f;
   private float threshold = 0.01f;
@@ -60,12 +62,18 @@ public class NewPlayerMovement : MonoBehaviour {
 
   private void FixedUpdate() {
     Movement();
+    CapSpeed();
+    /*if (grounded) {
+      rb.drag = groundDrag;
+    }
+    else {
+      rb.drag = 0f;
+    }*/
   }
 
   private void Update() {
     MyInput();
     Look();
-    Debug.Log($"yaw: {yaw:F3}");       
   }
 
   /// <summary>
@@ -101,7 +109,7 @@ public class NewPlayerMovement : MonoBehaviour {
 
   private void Movement() {
     //Extra gravity
-    rb.AddForce(Vector3.down * Time.deltaTime * 30);
+    rb.AddForce(Vector3.down * Time.deltaTime * 60);
 
     //Find actual velocity relative to where player is looking
     Vector2 mag = FindVelRelativeToLook();
@@ -146,8 +154,10 @@ public class NewPlayerMovement : MonoBehaviour {
   }
 
   private void Jump() {
+    Debug.Log("Trying to jump");
     if (grounded && readyToJump) {
       readyToJump = false;
+      //Debug.Log("Grounded and ready to jump");
 
       //Add jump forces
       rb.AddForce(Vector2.up * jumpForce * 1.5f);
@@ -202,6 +212,10 @@ public class NewPlayerMovement : MonoBehaviour {
   /// Useful for vectors calculations regarding movement and limiting movement
   /// </summary>
   /// <returns></returns>
+  public Vector2 FindVelRelativeToLook() {
+    Vector3 localVel = orientation.InverseTransformDirection(rb.velocity);
+    return new Vector2(localVel.x, localVel.z);
+  }
 
   private bool IsFloor(Vector3 v) {
     float angle = Vector3.Angle(Vector3.up, v);
@@ -247,23 +261,24 @@ public class NewPlayerMovement : MonoBehaviour {
     float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime * sensMultiplier;
     float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime * sensMultiplier;
 
-    // -- pitch
+    // pitch
     xRotation = Mathf.Clamp(xRotation - mouseY, -90f, 90f);
     playerCam.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
 
-    // -- yaw
-    // Rotate the player body itself
+    // yaw
     //transform.Rotate(Vector3.up, mouseX);
-    // Keep your "orientation" object in sync
     //orientation.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
-    //attempt:
+    //attempt: (works)
     orientation.Rotate(Vector3.up, mouseX);
     orientation.rotation = Quaternion.Euler(0f, orientation.eulerAngles.y, 0f);
   }
 
-  public Vector2 FindVelRelativeToLook() {
-    Vector3 localVel = orientation.InverseTransformDirection(rb.velocity);
-    return new Vector2(localVel.x, localVel.z);
-  }
+  void CapSpeed() {
+    Vector3 flatVelocity = new Vector3(rb.velocity.x, rb.velocity.y, rb.velocity.z);
 
+    if (flatVelocity.magnitude > velocityCap) {
+      Vector3 limitedVel = flatVelocity.normalized * velocityCap;
+      rb.velocity = limitedVel;
+    }
+  }
 }

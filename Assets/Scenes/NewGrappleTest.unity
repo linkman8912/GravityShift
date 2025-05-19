@@ -665,10 +665,25 @@ PrefabInstance:
       propertyPath: grappleLayer.m_Bits
       value: 4294967295
       objectReference: {fileID: 0}
+    - target: {fileID: 2664888297210237269, guid: 47a5a08471625cb46bce68af165f2b70,
+        type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       propertyPath: m_Name
       value: Example player prefab
+      objectReference: {fileID: 0}
+    - target: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
+        type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3987954322617379118, guid: 47a5a08471625cb46bce68af165f2b70,
+        type: 3}
+      propertyPath: m_Layer
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4848256023872593003, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
@@ -724,6 +739,11 @@ PrefabInstance:
     - target: {fileID: 4897202846108355641, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5113624588999588090, guid: 47a5a08471625cb46bce68af165f2b70,
+        type: 3}
+      propertyPath: m_Layer
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9155025129207995668, guid: 47a5a08471625cb46bce68af165f2b70,
@@ -1115,9 +1135,9 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 112
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
 --- !u!114 &2022133103
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1127,22 +1147,24 @@ MonoBehaviour:
   m_GameObject: {fileID: 2022133096}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aceb432a5a7d155449fa473523e86e28, type: 3}
+  m_Script: {fileID: 11500000, guid: 70487bcf0b8b594e8884339be4aaa2e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   playerCam: {fileID: 1547831960}
   orientation: {fileID: 2022133097}
-  moveSpeed: 1000
-  maxSpeed: 20
+  moveSpeed: 950
+  maxSpeed: 400
+  velocityCap: 1500
   grounded: 0
   whatIsGround:
     serializedVersion: 2
     m_Bits: 4294967295
-  counterMovement: 0.175
+  groundDrag: 3
+  counterMovement: 1.75
   maxSlopeAngle: 35
-  slideForce: 400
-  slideCounterMovement: 0.2
-  jumpForce: 550
+  slideForce: 90
+  slideCounterMovement: 2
+  jumpForce: 100
 --- !u!1001 &578493132363122840
 PrefabInstance:
   m_ObjectHideFlags: 0
