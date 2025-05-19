@@ -44,15 +44,15 @@ public class GrappleRight : MonoBehaviour
 
     void HandleGrappleInput()
     {
-        // block input if orb is held
+        // bail if orb is held
         if ((_orbShooter != null && _orbShooter.IsOrbHeld) ||
             GravityOrbShooter.leftClickConsumed)
             return;
 
+        // only proceed on right‐click
         if (!Input.GetMouseButtonDown(1))
             return;
 
-        // COMBINE both masks so anchors become hittable
         int detectionMask = grappleLayer.value | anchorLayer.value;
         if (!Physics.Raycast(
                 playerCamera.transform.position,
@@ -115,58 +115,48 @@ public class GrappleRight : MonoBehaviour
         bool aIsAnchor = (anchorLayer.value & (1 << hitA.collider.gameObject.layer)) != 0;
         bool bIsAnchor = (anchorLayer.value & (1 << hitB.collider.gameObject.layer)) != 0;
 
-        // DON’T hook two anchors together
+        // if both are anchors, just draw a visual line
         if (aIsAnchor && bIsAnchor)
         {
-            Debug.LogWarning("Both targets are anchors! At least one must be dynamic.");
+            if (enableDebug)
+                Debug.Log($"Visual-only connection between anchors: {hitA.collider.name} ↔ {hitB.collider.name}");
+            CreateVisualConnection(hitA, hitB);
             return;
         }
 
-        // determine which is host (dynamic) vs anchor (if any)
         RaycastHit hostHit, anchorHit;
         if (aIsAnchor ^ bIsAnchor)
         {
-            if (aIsAnchor)
-            {
-                anchorHit = hitA; hostHit = hitB;
-            }
-            else
-            {
-                anchorHit = hitB; hostHit = hitA;
-            }
+            anchorHit = aIsAnchor ? hitA : hitB;
+            hostHit = aIsAnchor ? hitB : hitA;
         }
         else
         {
-            // both dynamic or both non-anchor: treat hitA as host
+            // neither or both anchors → treat second as anchor
             hostHit = hitA;
             anchorHit = hitB;
         }
 
-        Rigidbody hostRb = hostHit.rigidbody;
-        Rigidbody anchorRb = anchorHit.rigidbody;
+        var hostRb = hostHit.rigidbody;
+        var anchorRb = anchorHit.rigidbody;
 
-        // add SpringJoint on host only
-        SpringJoint spring = hostRb.gameObject.AddComponent<SpringJoint>();
+        var spring = hostRb.gameObject.AddComponent<SpringJoint>();
         spring.spring = springForce;
         spring.damper = damperForce;
         spring.autoConfigureConnectedAnchor = false;
         spring.enableCollision = true;
 
-        // set host anchor point
-        Vector3 hostAnchor = ((centerGrappleLayer.value & (1 << hostHit.collider.gameObject.layer)) != 0)
+        // pick anchors based on centerGrappleLayer
+        spring.anchor = ((centerGrappleLayer.value & (1 << hostHit.collider.gameObject.layer)) != 0)
             ? Vector3.zero
             : hostHit.transform.InverseTransformPoint(hostHit.point);
-        spring.anchor = hostAnchor;
 
-        // connect to anchorRb
         spring.connectedBody = anchorRb;
-        Vector3 connAnchor = ((centerGrappleLayer.value & (1 << anchorHit.collider.gameObject.layer)) != 0)
+        spring.connectedAnchor = ((centerGrappleLayer.value & (1 << anchorHit.collider.gameObject.layer)) != 0)
             ? Vector3.zero
             : anchorHit.transform.InverseTransformPoint(anchorHit.point);
-        spring.connectedAnchor = connAnchor;
 
-        // draw line
-        LineRenderer lr = new GameObject("GrappleLine").AddComponent<LineRenderer>();
+        var lr = new GameObject("GrappleLine").AddComponent<LineRenderer>();
         lr.positionCount = 2;
         lr.material = lineMaterial;
         lr.startWidth = lr.endWidth = 0.1f;
@@ -182,9 +172,34 @@ public class GrappleRight : MonoBehaviour
         }
     }
 
+    void CreateVisualConnection(RaycastHit hitA, RaycastHit hitB)
+    {
+        Vector3 localA = ((centerGrappleLayer.value & (1 << hitA.collider.gameObject.layer)) != 0)
+            ? Vector3.zero
+            : hitA.transform.InverseTransformPoint(hitA.point);
+        Vector3 localB = ((centerGrappleLayer.value & (1 << hitB.collider.gameObject.layer)) != 0)
+            ? Vector3.zero
+            : hitB.transform.InverseTransformPoint(hitB.point);
+
+        var lr = new GameObject("GrappleLine_Visual").AddComponent<LineRenderer>();
+        lr.positionCount = 2;
+        lr.material = lineMaterial;
+        lr.startWidth = lr.endWidth = 0.1f;
+
+        activeGrapples.Add(new GrapplePair(
+            hitA.rigidbody,
+            hitB.rigidbody,
+            null,    // no spring
+            lr,
+            localA,
+            localB
+        ));
+    }
+
     void HandleGrappleRelease()
     {
-        if (!Input.GetKeyDown(releaseKey)) return;
+        if (!Input.GetKeyDown(releaseKey))
+            return;
 
         if (enableDebug)
             Debug.Log($"Releasing all ({activeGrapples.Count}) grapples");
@@ -194,7 +209,6 @@ public class GrappleRight : MonoBehaviour
             if (pair.springJoint != null) Destroy(pair.springJoint);
             if (pair.lineRenderer != null) Destroy(pair.lineRenderer.gameObject);
         }
-
         activeGrapples.Clear();
         isFirstTargetSelected = false;
     }
@@ -205,14 +219,22 @@ public class GrappleRight : MonoBehaviour
         {
             if (pair.lineRenderer == null) continue;
 
-            Vector3 startPoint = pair.objectA.transform.TransformPoint(pair.springJoint.anchor);
-            Vector3 endPoint = pair.springJoint.connectedBody.transform.TransformPoint(pair.springJoint.connectedAnchor);
+            Vector3 pA, pB;
+            if (pair.springJoint != null)
+            {
+                pA = pair.objectA.transform.TransformPoint(pair.springJoint.anchor);
+                pB = pair.springJoint.connectedBody.transform.TransformPoint(pair.springJoint.connectedAnchor);
+            }
+            else
+            {
+                pA = pair.objectA.transform.TransformPoint(pair.anchorA);
+                pB = pair.objectB.transform.TransformPoint(pair.anchorB);
+            }
 
-            pair.lineRenderer.SetPosition(0, startPoint);
-            pair.lineRenderer.SetPosition(1, endPoint);
-
+            pair.lineRenderer.SetPosition(0, pA);
+            pair.lineRenderer.SetPosition(1, pB);
             if (enableDebug)
-                Debug.DrawLine(startPoint, endPoint, Color.cyan);
+                Debug.DrawLine(pA, pB, Color.cyan);
         }
     }
 
@@ -229,12 +251,14 @@ public class GrappleRight : MonoBehaviour
         }
     }
 
+    // --- nested helper type ---
     private class GrapplePair
     {
         public Rigidbody objectA;
         public Rigidbody objectB;
         public SpringJoint springJoint;
         public LineRenderer lineRenderer;
+        public Vector3 anchorA, anchorB;
 
         public GrapplePair(Rigidbody a, Rigidbody b, SpringJoint sj, LineRenderer lr)
         {
@@ -242,6 +266,21 @@ public class GrappleRight : MonoBehaviour
             objectB = b;
             springJoint = sj;
             lineRenderer = lr;
+            if (sj != null)
+            {
+                anchorA = sj.anchor;
+                anchorB = sj.connectedAnchor;
+            }
+        }
+
+        public GrapplePair(Rigidbody a, Rigidbody b, SpringJoint sj, LineRenderer lr, Vector3 aA, Vector3 aB)
+        {
+            objectA = a;
+            objectB = b;
+            springJoint = sj;
+            lineRenderer = lr;
+            anchorA = aA;
+            anchorB = aB;
         }
     }
 }

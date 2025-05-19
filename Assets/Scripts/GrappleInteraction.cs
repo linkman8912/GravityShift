@@ -14,7 +14,6 @@ public class GrappleInteraction : MonoBehaviour
 
     [Header("References")]
     public Camera playerCamera;
-    public KeyCode interactKey = KeyCode.E;
 
     private RaycastHit firstHit;
     private bool isFirstSelected = false;
@@ -29,15 +28,17 @@ public class GrappleInteraction : MonoBehaviour
 
     void Update()
     {
-        if (!Input.GetKeyDown(interactKey))
+        // only proceed on right‐click
+        if (!Input.GetMouseButtonDown(1))
             return;
 
         int mask = electricLayer.value | heatLayer.value | waterLayer.value;
-        if (!Physics.Raycast(playerCamera.transform.position,
-                             playerCamera.transform.forward,
-                             out RaycastHit hit,
-                             maxInteractDistance,
-                             mask))
+        if (!Physics.Raycast(
+                playerCamera.transform.position,
+                playerCamera.transform.forward,
+                out RaycastHit hit,
+                maxInteractDistance,
+                mask))
         {
             Debug.Log("[Interact] Nothing hit.");
             isFirstSelected = false;
@@ -52,7 +53,6 @@ public class GrappleInteraction : MonoBehaviour
             return;
         }
 
-        // second selection
         int layerA = firstHit.collider.gameObject.layer;
         int layerB = hit.collider.gameObject.layer;
 
@@ -63,16 +63,14 @@ public class GrappleInteraction : MonoBehaviour
         bool aIsHeat = (heatLayer.value & (1 << layerA)) != 0;
         bool bIsHeat = (heatLayer.value & (1 << layerB)) != 0;
 
-        // Helper to find which hit is the water object
         GameObject GetWaterObj() => aIsWater ? firstHit.collider.gameObject : hit.collider.gameObject;
 
         if ((aIsElectric && bIsWater) || (bIsElectric && aIsWater))
         {
-            // ELECTROCUTE
             var waterObj = GetWaterObj();
             int newLayer = LayerMask.NameToLayer(electrocutedWaterLayerName);
             if (newLayer == -1)
-                Debug.LogWarning($"Layer '{electrocutedWaterLayerName}' not found! Add it in Tags & Layers.");
+                Debug.LogWarning($"Layer '{electrocutedWaterLayerName}' not found!");
             else
             {
                 waterObj.layer = newLayer;
@@ -81,11 +79,10 @@ public class GrappleInteraction : MonoBehaviour
         }
         else if ((aIsHeat && bIsWater) || (bIsHeat && aIsWater))
         {
-            // BOIL
             var waterObj = GetWaterObj();
             int newLayer = LayerMask.NameToLayer(boiledLayerName);
             if (newLayer == -1)
-                Debug.LogWarning($"Layer '{boiledLayerName}' not found! Add it in Tags & Layers.");
+                Debug.LogWarning($"Layer '{boiledLayerName}' not found!");
             else
             {
                 waterObj.layer = newLayer;
@@ -97,7 +94,6 @@ public class GrappleInteraction : MonoBehaviour
             Debug.Log("[Interact] Those two layers don't form a valid interaction.");
         }
 
-        // reset selection
         isFirstSelected = false;
     }
 }
