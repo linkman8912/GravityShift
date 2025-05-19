@@ -668,7 +668,7 @@ PrefabInstance:
     - target: {fileID: 2664888297210237269, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       propertyPath: m_Layer
-      value: 0
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
@@ -678,12 +678,12 @@ PrefabInstance:
     - target: {fileID: 3987648850318037297, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       propertyPath: m_Layer
-      value: 0
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 3987954322617379118, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       propertyPath: m_Layer
-      value: 0
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 4848256023872593003, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
@@ -744,7 +744,7 @@ PrefabInstance:
     - target: {fileID: 5113624588999588090, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
       propertyPath: m_Layer
-      value: 0
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 9155025129207995668, guid: 47a5a08471625cb46bce68af165f2b70,
         type: 3}
@@ -1070,7 +1070,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   whatIsGrappleable:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4095
   grappleKey: 323
   gunTip: {fileID: 1661393122}
   camera: {fileID: 1547831960}
