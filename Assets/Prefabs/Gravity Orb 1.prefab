@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 3277049186252751048}
   - component: {fileID: 2232574883296894526}
   - component: {fileID: 7749677739076758817}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Gravity Orb 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -51,10 +51,16 @@ MonoBehaviour:
   lifeTime: 20
   effectRadius: 25
   pullForce: 50
-  pushForce: 150
+  pushForce: 300
   isPull: 0
-  effectDuration: 3
+  effectDuration: 0.25
   isHeld: 0
+  ignoreActivationLayers:
+    serializedVersion: 2
+    m_Bits: 4096
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 4059
 --- !u!33 &8194196818396966950
 MeshFilter:
   m_ObjectHideFlags: 0
