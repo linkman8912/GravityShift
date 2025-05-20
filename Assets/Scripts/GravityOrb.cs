@@ -17,13 +17,24 @@ public class GravityOrb : MonoBehaviour
     public float pushForce = 50f;
 
     [Tooltip("If true, the orb pulls objects in; if false, it pushes objects away.")]
-    public bool isPull = false;  // Default is push mode
+    public bool isPull = false;
 
-    [Tooltip("Duration (in seconds) for which the orb continuously applies its force after collision.")]
-    public float effectDuration = 2f;
+    [Header("Effect Durations")]
+    [Tooltip("Duration (in seconds) for which the orb applies pull force after collision.")]
+    public float pullDuration = 2f;
+
+    [Tooltip("Duration (in seconds) for which the orb applies push force after collision.")]
+    public float pushDuration = 2f;
 
     [Tooltip("Indicates whether the orb is still held (i.e., not fired yet).")]
     public bool isHeld = false;
+
+    [Header("Collision Masks")]
+    [Tooltip("Layers on which the orb should NOT activate on collision.")]
+    public LayerMask ignoreActivationLayers;
+
+    [Tooltip("Layers which always count as 'ground' hits, even if also in Ignore Activation Layers.")]
+    public LayerMask groundLayers;
 
     private Rigidbody _rb;
     private bool _effectTriggered = false;
@@ -31,31 +42,38 @@ public class GravityOrb : MonoBehaviour
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
+
+        // Always ignore physics between Orb and Player layers
+        int orbLayer = gameObject.layer;
+        int playerLayer = LayerMask.NameToLayer("Player");
+        Physics.IgnoreLayerCollision(orbLayer, playerLayer, true);
     }
 
     private void Start()
     {
-        // Auto-destroy after lifeTime seconds.
         Destroy(gameObject, lifeTime);
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        // If the orb is held and it collides, we activate it without detaching from the holder.
+        int layer = collision.gameObject.layer;
+        bool isIgnored = (ignoreActivationLayers.value & (1 << layer)) != 0;
+        bool isGround = (groundLayers.value & (1 << layer)) != 0;
+
+        // Skip activation for ignored layers, unless it's designated as ground
+        if (isIgnored && !isGround)
+            return;
+
+        // If still held: force push-mode and trigger (but don't detach)
         if (isHeld)
         {
-            // Force push mode.
             isPull = false;
-            // Only start the effect if not already triggered.
             if (!_effectTriggered)
-            {
                 TriggerGravityEffect();
-            }
-            // Do not detach: the orb remains with the holder.
             return;
         }
 
-        // For orbs that have been fired, detach them on collision.
+        // If thrown and not yet triggered: stop motion, make kinematic, then trigger once
         if (!_effectTriggered)
         {
             if (_rb != null)
@@ -68,36 +86,40 @@ public class GravityOrb : MonoBehaviour
     }
 
     /// <summary>
-    /// Begins applying continuous force for effectDuration.
+    /// Begins applying continuous force for the appropriate duration.
     /// </summary>
     public void TriggerGravityEffect()
     {
         _effectTriggered = true;
-        StartCoroutine(ApplyContinuousForce());
+        float duration = isPull ? pullDuration : pushDuration;
+        StartCoroutine(ApplyContinuousForce(duration));
     }
 
-    private IEnumerator ApplyContinuousForce()
+    private IEnumerator ApplyContinuousForce(float duration)
     {
         float elapsed = 0f;
-        WaitForFixedUpdate wait = new WaitForFixedUpdate();
-        while (elapsed < effectDuration)
+        var wait = new WaitForFixedUpdate();
+
+        while (elapsed < duration)
         {
             Collider[] hitColliders = Physics.OverlapSphere(transform.position, effectRadius);
-            foreach (Collider col in hitColliders)
+            foreach (var col in hitColliders)
             {
-                Rigidbody otherRb = col.GetComponent<Rigidbody>();
+                var otherRb = col.attachedRigidbody;
                 if (otherRb != null && otherRb != _rb)
                 {
-                    Vector3 direction = isPull ?
-                        (transform.position - otherRb.transform.position).normalized :
-                        (otherRb.transform.position - transform.position).normalized;
-                    float force = isPull ? pullForce : pushForce;
-                    otherRb.AddForce(direction * force, ForceMode.Force);
+                    Vector3 dir = isPull
+                        ? (transform.position - otherRb.position).normalized
+                        : (otherRb.position - transform.position).normalized;
+                    float f = isPull ? pullForce : pushForce;
+                    otherRb.AddForce(dir * f, ForceMode.Force);
                 }
             }
+
             elapsed += Time.fixedDeltaTime;
             yield return wait;
         }
+
         Destroy(gameObject);
     }
 }
