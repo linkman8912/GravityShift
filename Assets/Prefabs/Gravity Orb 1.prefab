@@ -51,8 +51,8 @@ MonoBehaviour:
   lifeTime: 20
   effectRadius: 25
   pullForce: 50
-  pushForce: 30
-  isPull: 1
+  pushForce: 150
+  isPull: 0
   effectDuration: 3
   isHeld: 0
 --- !u!33 &8194196818396966950

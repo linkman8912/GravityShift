@@ -26,28 +26,43 @@ public class Grappling : MonoBehaviour {
     DrawRope();
   }
 
-  void StartGrapple() {
-    Debug.Log("start grapple");
-    RaycastHit hit;
-    if (Physics.Raycast(origin: camera.position, direction: camera.forward, out hit, maxDistance)) {
-      grapplePoint = hit.point;
-      joint = player.gameObject.AddComponent<SpringJoint>();
-      joint.autoConfigureConnectedAnchor = false;
-      joint.connectedAnchor = grapplePoint;
-      float distanceFromPoint = Vector3.Distance(player.position, grapplePoint);
-      // modifiable based on game feel
-      joint.maxDistance = distanceFromPoint * 0.8f;
-      joint.minDistance = distanceFromPoint * 0.25f;
-      joint.spring = 4.5f;
-      joint.damper = 7f;
-      joint.massScale = 4.5f;
-      lr.positionCount = 2;
+    void StartGrapple()
+    {
+        Debug.Log("start grapple");
+        RaycastHit hit;
+        // 1) pass your LayerMask into the Raycast call:
+        if (Physics.Raycast(
+              origin: camera.position,
+              direction: camera.forward,
+              out hit,
+              maxDistance,
+              whatIsGrappleable  // <-- mask excludes your Player layer!
+           ))
+        {
+            // 2) sanity-check that you didn’t still hit your own player transform:
+            if (hit.collider.transform.root == player.transform)
+            {
+                Debug.Log("Grapple hit player – ignoring.");
+                return;
+            }
 
-
+            // ––––– existing grapple hookup code –––––
+            grapplePoint = hit.point;
+            joint = player.gameObject.AddComponent<SpringJoint>();
+            joint.autoConfigureConnectedAnchor = false;
+            joint.connectedAnchor = grapplePoint;
+            float distanceFromPoint = Vector3.Distance(player.position, grapplePoint);
+            joint.maxDistance = distanceFromPoint * 0.8f;
+            joint.minDistance = distanceFromPoint * 0.25f;
+            joint.spring = 4.5f;
+            joint.damper = 7f;
+            joint.massScale = 4.5f;
+            lr.positionCount = 2;
+        }
     }
-  }
 
-  void StopGrapple() {
+
+    void StopGrapple() {
     lr.positionCount = 0;
     Destroy(joint);
   }
