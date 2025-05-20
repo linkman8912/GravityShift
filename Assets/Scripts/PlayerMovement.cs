@@ -53,6 +53,8 @@ public class NewPlayerMovement : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        rb.freezeRotation = true;  
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
 
     void Start()
@@ -78,7 +80,11 @@ public class NewPlayerMovement : MonoBehaviour
     private void Update()
     {
         MyInput();
-        Look();
+        //Look();
+    }
+
+    private void LateUpdate() {
+      Look();
     }
 
     /// <summary>
@@ -290,16 +296,23 @@ public class NewPlayerMovement : MonoBehaviour
         float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime * sensMultiplier;
         float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime * sensMultiplier;
 
-        // pitch
+        //// pitch
+        //xRotation = Mathf.Clamp(xRotation - mouseY, -90f, 90f);
+        //playerCam.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+
+        // yaw
+        ////transform.Rotate(Vector3.up, mouseX);
+        ////orientation.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+        ////attempt: (works)
+        //orientation.Rotate(Vector3.up, mouseX);
+        //orientation.rotation = Quaternion.Euler(0f, orientation.eulerAngles.y, 0f);
+
+        //new 
         xRotation = Mathf.Clamp(xRotation - mouseY, -90f, 90f);
         playerCam.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
 
-        // yaw
-        //transform.Rotate(Vector3.up, mouseX);
-        //orientation.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
-        //attempt: (works)
-        orientation.Rotate(Vector3.up, mouseX);
-        orientation.rotation = Quaternion.Euler(0f, orientation.eulerAngles.y, 0f);
+        yaw += mouseX;
+        orientation.rotation = Quaternion.Euler(0f, yaw, 0f);
     }
 
     void CapSpeed()
