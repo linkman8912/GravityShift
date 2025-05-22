@@ -9,12 +9,14 @@ public class Grappling : MonoBehaviour {
   public Transform gunTip, camera, player;
   public float maxDistance = 100000f;
   private SpringJoint joint;
+  private GravityOrbShooter orb;
 
   void Start() {
     lr = GetComponent<LineRenderer>();
+    orb = GetComponent<GravityOrbShooter>();
   }
   void Update() {
-    if(Input.GetKeyDown(grappleKey)) {
+    if(Input.GetKeyDown(grappleKey) /*&& !orb.IsOrbHeld*/) {
       StartGrapple();
     }
     else if(Input.GetKeyUp(grappleKey)) {

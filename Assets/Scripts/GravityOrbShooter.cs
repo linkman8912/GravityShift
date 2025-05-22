@@ -28,7 +28,7 @@ public class GravityOrbShooter : MonoBehaviour
     private GameObject activeOrb = null;
 
     // Public property to indicate if an orb is currently held.
-    public bool IsOrbHeld
+    [HideInInspector] public bool IsOrbHeld
     {
         get { return activeOrb != null; }
     }
