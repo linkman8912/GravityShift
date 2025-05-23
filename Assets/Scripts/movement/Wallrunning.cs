@@ -1,0 +1,91 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Wallrunning : MonoBehaviour
+{
+  [Header("Wallrunning")]
+  [SerializeField] private LayerMask whatIsWall;
+  private LayerMask whatIsGround;
+  [SerializeField] private float wallRunForce = 200;
+  [SerializeField] private float maxWallRunTime = 1.5f;
+  private float wallRunTimer;
+
+  [Header("Input")]
+  private float horizontalInput;
+  private float verticalInput;
+  [Header("Detection")]
+  [SerializeField] private float wallCheckDistance = 0.7f;
+  [SerializeField] private float minJumpHeight = 2;
+  private RaycastHit leftWallHit;
+  private RaycastHit rightWallHit;
+  private bool wallLeft;
+  private bool wallRight;
+  [Header("References")]
+  public Transform orientation;
+  private PlayerMovement pm;
+  private Rigidbody rb;
+
+
+  // Start is called before the first frame update
+  void Start()
+  {
+    rb = GetComponent<Rigidbody>();
+    pm = GetComponent<PlayerMovement>();
+    whatIsGround = pm.whatIsGround;
+  }
+
+  // Update is called once per frame
+  void Update() {
+
+  }
+
+  void FixedUpdate() {
+    CheckForWall();
+    StateMachine();
+  }
+
+  private void CheckForWall() {
+    wallRight = Physics.Raycast(transform.position, orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
+    wallLeft = Physics.Raycast(transform.position, -orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
+  }
+  
+  private bool AboveGround() {
+    return !Physics.Raycast(transform.position, Vector3.down, minJumpHeight, whatIsGround);
+  }
+
+  void StateMachine() {
+    // handle inputs
+    horizontalInput = Input.GetAxisRaw("Horizontal");
+    verticalInput = Input.GetAxisRaw("Vertical");
+
+    // state 1: wallrunning
+    if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround()) {
+      if(!pm.wallrunning) {
+        StartWallrun();
+      }
+    }
+    else {
+      if (pm.wallrunning) {
+        StopWallrun();
+      }
+    }
+  }
+
+  void StartWallrun() {
+    pm.wallrunning = true;
+    Debug.Log("Starting wallrun");
+  }
+  void WallrunningMovement() {
+    rb.useGravity = false;
+    rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+    Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+    Vector3 wallForward = Vector3.Cross(wallNormal, transform.up);
+
+    // forward force
+    rb.AddForce(wallForward * wallRunForce, ForceMode.Force);
+  }
+  void StopWallrun() {
+    pm.wallrunning = false;
+  }
+}
