@@ -30,7 +30,6 @@ public class Grappling : MonoBehaviour {
 
     void StartGrapple()
     {
-        Debug.Log("start grapple");
         RaycastHit hit;
         // 1) pass your LayerMask into the Raycast call:
         if (Physics.Raycast(
@@ -41,7 +40,7 @@ public class Grappling : MonoBehaviour {
               whatIsGrappleable  // <-- mask excludes your Player layer!
            ))
         {
-            // 2) sanity-check that you didn’t still hit your own player transform:
+            // 2) sanity-check that you didn't still hit your own player transform:
             if (hit.collider.transform.root == player.transform)
             {
                 Debug.Log("Grapple hit player – ignoring.");
