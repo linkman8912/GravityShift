@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 3274560924186316928}
   - component: {fileID: 1987068540533515476}
   - component: {fileID: 7427746591546126425}
+  - component: {fileID: 8228335346054378263}
+  - component: {fileID: 1102010051754747617}
   m_Layer: 12
   m_Name: Example player prefab 1
   m_TagString: Untagged
@@ -71,14 +73,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerCam: {fileID: 4366765376868265609}
   orientation: {fileID: 8838492309326230402}
+  sensitivity: 300
   moveSpeed: 950
   maxSpeed: 400
-  velocityCap: 1500
   grounded: 0
+  wallrunning: 0
   whatIsGround:
     serializedVersion: 2
     m_Bits: 4294967295
-  groundDrag: 3
+  wallrunSpeed: 10
   counterMovement: 1.75
   maxSlopeAngle: 35
   slideForce: 90
@@ -134,6 +137,43 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8228335346054378263
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3899274780960977910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d5b01358c222254b864c12f5c028cd7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 3
+  waterLayer:
+    serializedVersion: 2
+    m_Bits: 16
+  dangerousStates: -1
+--- !u!114 &1102010051754747617
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3899274780960977910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05f60b6adca80e998a83684992fa68b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  whatIsWall:
+    serializedVersion: 2
+    m_Bits: 11007
+  wallRunForce: 200
+  maxWallRunTime: 1.5
+  wallCheckDistance: 0.7
+  minJumpHeight: 2
+  orientation: {fileID: 8838492309326230402}
 --- !u!1 &5677030070538419660
 GameObject:
   m_ObjectHideFlags: 0
@@ -181,7 +221,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   whatIsGrappleable:
     serializedVersion: 2
-    m_Bits: 4095
+    m_Bits: 2815
   grappleKey: 323
   gunTip: {fileID: 2247458544964649828}
   camera: {fileID: 4366765376868265609}
