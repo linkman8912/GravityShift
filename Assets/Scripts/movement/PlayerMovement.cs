@@ -3,7 +3,7 @@
 using System;
 using UnityEngine;
 
-public class NewPlayerMovement : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
 
     //Assignables
@@ -21,10 +21,10 @@ public class NewPlayerMovement : MonoBehaviour
     //Movement
     public float moveSpeed = 7f;
     public float maxSpeed = 6f;
-    public float velocityCap = 1500f;
-    public bool grounded;
+    [HideInInspector] public bool grounded;
+    [HideInInspector] public bool wallrunning = false;
     public LayerMask whatIsGround;
-    public float groundDrag = 3;
+    public float wallrunSpeed = 10f;
 
     public float counterMovement = 0.175f;
     private float threshold = 0.01f;
@@ -68,7 +68,7 @@ public class NewPlayerMovement : MonoBehaviour
     private void FixedUpdate()
     {
         Movement();
-        CapSpeed();
+        //CapSpeed();
         /*if (grounded) {
           rb.drag = groundDrag;
         }
@@ -123,8 +123,10 @@ public class NewPlayerMovement : MonoBehaviour
         transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
     }
 
-    private void Movement()
-    {
+    private void Movement() {
+        if (wallrunning) {
+          return;
+        }
         //Extra gravity
         rb.AddForce(Vector3.down * Time.deltaTime * 60);
 
@@ -142,8 +144,7 @@ public class NewPlayerMovement : MonoBehaviour
         float maxSpeed = this.maxSpeed;
 
         //If sliding down a ramp, add force down so player stays grounded and also builds speed
-        if (crouching && grounded && readyToJump)
-        {
+        if (crouching && grounded && readyToJump) {
             rb.AddForce(Vector3.down * Time.deltaTime * 3000);
             return;
         }
@@ -174,11 +175,9 @@ public class NewPlayerMovement : MonoBehaviour
 
     private void Jump()
     {
-        Debug.Log("Trying to jump");
         if (grounded && readyToJump)
         {
             readyToJump = false;
-            //Debug.Log("Grounded and ready to jump");
 
             //Add jump forces
             rb.AddForce(Vector2.up * jumpForce * 1.5f);
@@ -315,7 +314,7 @@ public class NewPlayerMovement : MonoBehaviour
         orientation.rotation = Quaternion.Euler(0f, yaw, 0f);
     }
 
-    void CapSpeed()
+    /*void CapSpeed()
     {
         Vector3 flatVelocity = new Vector3(rb.velocity.x, rb.velocity.y, rb.velocity.z);
 
@@ -324,5 +323,5 @@ public class NewPlayerMovement : MonoBehaviour
             Vector3 limitedVel = flatVelocity.normalized * velocityCap;
             rb.velocity = limitedVel;
         }
-    }
+    }*/
 }
