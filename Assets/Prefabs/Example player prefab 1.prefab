@@ -81,12 +81,12 @@ MonoBehaviour:
   whatIsGround:
     serializedVersion: 2
     m_Bits: 4294967295
-  wallrunSpeed: 10
+  wallrunSpeed: 400
   counterMovement: 1.75
   maxSlopeAngle: 35
   slideForce: 90
   slideCounterMovement: 2
-  jumpForce: 100
+  jumpForce: 200
 --- !u!54 &1987068540533515476
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -171,8 +171,11 @@ MonoBehaviour:
     m_Bits: 11007
   wallRunForce: 200
   maxWallRunTime: 1.5
-  wallCheckDistance: 0.7
-  minJumpHeight: 2
+  wallrunDelayTime: 0.75
+  walljumpUpForce: 150
+  walljumpSideForce: 75
+  wallCheckDistance: 4
+  minJumpHeight: 1
   orientation: {fileID: 8838492309326230402}
 --- !u!1 &5677030070538419660
 GameObject:
@@ -223,6 +226,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 2815
   grappleKey: 323
+  pullKey: 9
+  pullSpeed: 50
   gunTip: {fileID: 2247458544964649828}
   camera: {fileID: 4366765376868265609}
   player: {fileID: 8838492309326230402}
