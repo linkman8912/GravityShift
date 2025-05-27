@@ -18,12 +18,12 @@ public class PlayerMovement : MonoBehaviour
     public float sensitivity = 300f;
 
     //Movement
-    public float moveSpeed = 7f;
-    public float maxSpeed = 6f;
+    public float moveSpeed = 950f;
+    public float maxSpeed = 400f;
     [HideInInspector] public bool grounded;
     [HideInInspector] public bool wallrunning = false;
     public LayerMask whatIsGround;
-    public float wallrunSpeed = 10f;
+    public float wallrunSpeed = 200f;
 
     public float counterMovement = 0.175f;
     private float threshold = 0.01f;
@@ -39,7 +39,6 @@ public class PlayerMovement : MonoBehaviour
     private bool readyToJump = true;
     private float jumpCooldown = 0.25f;
     public float jumpForce = 200;
-    private float totalMouseX = 0f;
 
     //Input
     float x, y;
