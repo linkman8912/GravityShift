@@ -168,7 +168,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78c59babe97493c4688e5290cab2df65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lifeTime: 15
+  lifeTime: 7.5
   impactEffect: {fileID: 0}
   destroyLayers:
     serializedVersion: 2
