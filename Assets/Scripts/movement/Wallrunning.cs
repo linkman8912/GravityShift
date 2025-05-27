@@ -8,10 +8,10 @@ public class Wallrunning : MonoBehaviour
   [SerializeField] private LayerMask whatIsWall;
   private LayerMask whatIsGround;
   [SerializeField] private float wallRunForce = 500;
-  [SerializeField] private float maxWallRunTime = 1.5f;
-  [SerializeField] private float wallrunDelayTime = 0.75f;
+  [SerializeField] private float maxWallrunTime = 1.5f;
+  //[SerializeField] private float walljumpDelayTime = 0.75f;
   private float wallrunTimer;
-  private float wallrunDelayTimer;
+  //private float walljumpDelayTimer;
   [Header("Walljumping")]
   [SerializeField] private float walljumpUpForce = 100f;
   [SerializeField] private float walljumpSideForce = 50f;
@@ -42,11 +42,12 @@ public class Wallrunning : MonoBehaviour
   // Update is called once per frame
   void Update() {
     StateMachine();
-    if (wallrunDelayTimer > 0)
-      wallrunDelayTimer -= Time.deltaTime;
-    else if (wallrunDelayTimer < 0)
-      wallrunDelayTimer = 0;
-    //Debug.Log(wallrunDelayTimer);
+    /*if (walljumpDelayTimer > 0)
+      walljumpDelayTimer -= Time.deltaTime;
+    else if (walljumpDelayTimer < 0)
+      walljumpDelayTimer = 0;
+    */
+    //Debug.Log(walljumpDelayTimer);
   }
 
   void FixedUpdate() {
@@ -69,13 +70,11 @@ public class Wallrunning : MonoBehaviour
     verticalInput = Input.GetAxisRaw("Vertical");
 
     // state 1: wallrunning
-    if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround() && (wallrunDelayTimer <= 0)) {
+    if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround()) {
       if(!pm.wallrunning) {
         StartWallrun();
       }
-    }
-    if (pm.wallrunning) {
-      if (wallrunTimer < maxWallRunTime) {
+      if (wallrunTimer < maxWallrunTime) {
         wallrunTimer += Time.deltaTime;
       }
       else {
@@ -85,6 +84,9 @@ public class Wallrunning : MonoBehaviour
         StopWallrun();
         Walljump();
       }
+    }
+    else if (pm.wallrunning) {
+      StopWallrun();
     }
   }
 
@@ -107,7 +109,6 @@ public class Wallrunning : MonoBehaviour
     rb.AddForce(-wallNormal * wallRunForce/2, ForceMode.Force);
   }
   void StopWallrun() {
-    wallrunDelayTimer = wallrunDelayTime;
     pm.wallrunning = false;
     //Debug.Log("Stopping wallrun");
   }
