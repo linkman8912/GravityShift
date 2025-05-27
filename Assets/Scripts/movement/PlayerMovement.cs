@@ -297,4 +297,3 @@ public class PlayerMovement : MonoBehaviour
         orientation.rotation = Quaternion.Euler(0f, yaw, 0f);
     }
 }
->>>>>>> 7754ad9ae49deaa7919e164821739bbd3622bb66
