@@ -53,7 +53,7 @@ public class PlayerMovement : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true;  
+        rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
 
@@ -83,8 +83,9 @@ public class PlayerMovement : MonoBehaviour
         //Look();
     }
 
-    private void LateUpdate() {
-      Look();
+    private void LateUpdate()
+    {
+        Look();
     }
 
     /// <summary>
@@ -123,9 +124,11 @@ public class PlayerMovement : MonoBehaviour
         transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
     }
 
-    private void Movement() {
-        if (wallrunning) {
-          return;
+    private void Movement()
+    {
+        if (wallrunning)
+        {
+            return;
         }
         //Extra gravity
         rb.AddForce(Vector3.down * Time.deltaTime * 60);
@@ -144,7 +147,8 @@ public class PlayerMovement : MonoBehaviour
         float maxSpeed = this.maxSpeed;
 
         //If sliding down a ramp, add force down so player stays grounded and also builds speed
-        if (crouching && grounded && readyToJump) {
+        if (crouching && grounded && readyToJump)
+        {
             rb.AddForce(Vector3.down * Time.deltaTime * 3000);
             return;
         }
