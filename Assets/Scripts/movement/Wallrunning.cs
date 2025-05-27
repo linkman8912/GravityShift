@@ -9,7 +9,9 @@ public class Wallrunning : MonoBehaviour
   private LayerMask whatIsGround;
   [SerializeField] private float wallRunForce = 500;
   [SerializeField] private float maxWallRunTime = 1.5f;
-  private float wallRunTimer;
+  [SerializeField] private float wallrunDelayTime = 0.75f;
+  private float wallrunTimer;
+  private float wallrunDelayTimer;
   [Header("Walljumping")]
   [SerializeField] private float walljumpUpForce = 100f;
   [SerializeField] private float walljumpSideForce = 50f;
@@ -40,6 +42,11 @@ public class Wallrunning : MonoBehaviour
   // Update is called once per frame
   void Update() {
     StateMachine();
+    if (wallrunDelayTimer > 0)
+      wallrunDelayTimer -= Time.deltaTime;
+    else if (wallrunDelayTimer < 0)
+      wallrunDelayTimer = 0;
+    //Debug.Log(wallrunDelayTimer);
   }
 
   void FixedUpdate() {
@@ -62,14 +69,14 @@ public class Wallrunning : MonoBehaviour
     verticalInput = Input.GetAxisRaw("Vertical");
 
     // state 1: wallrunning
-    if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround()) {
+    if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround() && (wallrunDelayTimer <= 0)) {
       if(!pm.wallrunning) {
         StartWallrun();
       }
     }
     if (pm.wallrunning) {
-      if (wallRunTimer < maxWallRunTime) {
-        wallRunTimer += Time.deltaTime;
+      if (wallrunTimer < maxWallRunTime) {
+        wallrunTimer += Time.deltaTime;
       }
       else {
         StopWallrun();
@@ -83,7 +90,8 @@ public class Wallrunning : MonoBehaviour
 
   void StartWallrun() {
     pm.wallrunning = true;
-    Debug.Log("Starting wallrun");
+    //Debug.Log("Starting wallrun");
+
   }
   void WallrunningMovement() {
     rb.useGravity = false;
@@ -99,12 +107,13 @@ public class Wallrunning : MonoBehaviour
     rb.AddForce(-wallNormal * wallRunForce/2, ForceMode.Force);
   }
   void StopWallrun() {
+    wallrunDelayTimer = wallrunDelayTime;
     pm.wallrunning = false;
-    Debug.Log("Stopping wallrun");
+    //Debug.Log("Stopping wallrun");
   }
   
   void Walljump() {
-    Debug.Log("Walljump");
+    //Debug.Log("Walljump");
     Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
 
     Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
