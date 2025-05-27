@@ -7,7 +7,7 @@ public class Wallrunning : MonoBehaviour
   [Header("Wallrunning")]
   [SerializeField] private LayerMask whatIsWall;
   private LayerMask whatIsGround;
-  [SerializeField] private float wallRunForce = 200;
+  [SerializeField] private float wallRunForce = 500;
   [SerializeField] private float maxWallRunTime = 1.5f;
   private float wallRunTimer;
 
@@ -15,7 +15,7 @@ public class Wallrunning : MonoBehaviour
   private float horizontalInput;
   private float verticalInput;
   [Header("Detection")]
-  [SerializeField] private float wallCheckDistance = 0.7f;
+  [SerializeField] private float wallCheckDistance = 2;
   [SerializeField] private float minJumpHeight = 2;
   private RaycastHit leftWallHit;
   private RaycastHit rightWallHit;
@@ -28,8 +28,7 @@ public class Wallrunning : MonoBehaviour
 
 
   // Start is called before the first frame update
-  void Start()
-  {
+  void Start() {
     rb = GetComponent<Rigidbody>();
     pm = GetComponent<PlayerMovement>();
     whatIsGround = pm.whatIsGround;
@@ -82,10 +81,15 @@ public class Wallrunning : MonoBehaviour
     Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
     Vector3 wallForward = Vector3.Cross(wallNormal, transform.up);
 
+    if((orientation.forward - wallForward).magnitude > (orientation.forward - -wallForward).magnitude)
+      wallForward = -wallForward;
+
     // forward force
     rb.AddForce(wallForward * wallRunForce, ForceMode.Force);
+    rb.AddForce(-wallNormal * wallRunForce/2, ForceMode.Force);
   }
   void StopWallrun() {
     pm.wallrunning = false;
+    Debug.Log("Stopping wallrun");
   }
 }
