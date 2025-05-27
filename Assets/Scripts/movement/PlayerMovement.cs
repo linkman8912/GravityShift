@@ -16,7 +16,6 @@ public class PlayerMovement : MonoBehaviour
     //Rotation and look
     private float xRotation;
     public float sensitivity = 300f;
-    private float sensMultiplier = 1f;
 
     //Movement
     public float moveSpeed = 7f;
@@ -39,7 +38,7 @@ public class PlayerMovement : MonoBehaviour
     //Jumping
     private bool readyToJump = true;
     private float jumpCooldown = 0.25f;
-    public float jumpForce = 6.5f;
+    public float jumpForce = 200;
     private float totalMouseX = 0f;
 
     //Input
@@ -114,8 +113,7 @@ public class PlayerMovement : MonoBehaviour
         transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
     }
 
-    private void Movement()
-    {
+    private void Movement() {
         if (wallrunning)
         {
             return;
@@ -164,14 +162,11 @@ public class PlayerMovement : MonoBehaviour
         // Movement while sliding
         if (grounded && crouching) multiplierV = 0f;
 
-        if (wallrunning) {
-          rb.AddForce(orientation.forward * 1 * moveSpeed * Time.deltaTime * multiplier * multiplierV);
-          return;
-        }
-
+        if (!wallrunning) {
         //Apply forces to move player
-        rb.AddForce(orientation.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
-        rb.AddForce(orientation.right * x * moveSpeed * Time.deltaTime * multiplier);
+          rb.AddForce(orientation.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
+          rb.AddForce(orientation.right * x * moveSpeed * Time.deltaTime * multiplier);
+        }
     }
 
     private void Jump() {
@@ -275,8 +270,8 @@ public class PlayerMovement : MonoBehaviour
 
 
     private void Look() {
-        float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime * sensMultiplier;
-        float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime * sensMultiplier;
+        float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime;
 
         //// pitch
         //xRotation = Mathf.Clamp(xRotation - mouseY, -90f, 90f);

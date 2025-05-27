@@ -10,13 +10,16 @@ public class Wallrunning : MonoBehaviour
   [SerializeField] private float wallRunForce = 500;
   [SerializeField] private float maxWallRunTime = 1.5f;
   private float wallRunTimer;
+  [Header("Walljumping")]
+  [SerializeField] private float walljumpUpForce = 100f;
+  [SerializeField] private float walljumpSideForce = 50f;
 
   [Header("Input")]
   private float horizontalInput;
   private float verticalInput;
   [Header("Detection")]
   [SerializeField] private float wallCheckDistance = 2;
-  [SerializeField] private float minJumpHeight = 2;
+  [SerializeField] private float minJumpHeight = 1;
   private RaycastHit leftWallHit;
   private RaycastHit rightWallHit;
   private bool wallLeft;
@@ -36,18 +39,18 @@ public class Wallrunning : MonoBehaviour
 
   // Update is called once per frame
   void Update() {
-    Debug.Log(wallLeft || wallRight);
+    StateMachine();
   }
 
   void FixedUpdate() {
     CheckForWall();
-    StateMachine();
   }
 
   private void CheckForWall() {
     wallRight = Physics.Raycast(transform.position, orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
     wallLeft = Physics.Raycast(transform.position, -orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
   }
+  
   
   private bool AboveGround() {
     return !Physics.Raycast(transform.position, Vector3.down, minJumpHeight, whatIsGround);
@@ -64,9 +67,16 @@ public class Wallrunning : MonoBehaviour
         StartWallrun();
       }
     }
-    else {
-      if (pm.wallrunning) {
+    if (pm.wallrunning) {
+      if (wallRunTimer < maxWallRunTime) {
+        wallRunTimer += Time.deltaTime;
+      }
+      else {
         StopWallrun();
+      }
+      if (Input.GetButtonDown("Jump")) {
+        StopWallrun();
+        Walljump();
       }
     }
   }
@@ -91,5 +101,16 @@ public class Wallrunning : MonoBehaviour
   void StopWallrun() {
     pm.wallrunning = false;
     Debug.Log("Stopping wallrun");
+  }
+  
+  void Walljump() {
+    Debug.Log("Walljump");
+    Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+
+    Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
+    // reset force
+    rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+    // add force
+    rb.AddForce(forceToApply, ForceMode.Impulse);
   }
 }
