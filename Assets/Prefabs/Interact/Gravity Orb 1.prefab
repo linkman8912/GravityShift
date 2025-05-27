@@ -53,7 +53,7 @@ MonoBehaviour:
   pullForce: 300
   pushForce: 500
   isPull: 0
-  pullDuration: 20
+  pullDuration: 5
   pushDuration: 2
   isHeld: 0
   ignoreActivationLayers:

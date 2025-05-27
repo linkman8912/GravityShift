@@ -44,35 +44,22 @@ public class GrappleRight : MonoBehaviour
 
     void HandleGrappleInput()
     {
-        // bail if orb is held
-        if ((_orbShooter != null && _orbShooter.IsOrbHeld) ||
-            GravityOrbShooter.leftClickConsumed)
+        if ((_orbShooter != null && _orbShooter.IsOrbHeld) || GravityOrbShooter.leftClickConsumed)
             return;
 
-        // only proceed on right‐click
         if (!Input.GetMouseButtonDown(1))
             return;
 
         int detectionMask = grappleLayer.value | anchorLayer.value;
-        if (!Physics.Raycast(
-                playerCamera.transform.position,
-                playerCamera.transform.forward,
-                out RaycastHit hit,
-                maxGrappleDistance,
-                detectionMask))
+        if (!Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out RaycastHit hit, maxGrappleDistance, detectionMask))
         {
             if (enableDebug)
             {
-                Debug.DrawRay(
-                    playerCamera.transform.position,
-                    playerCamera.transform.forward * maxGrappleDistance,
-                    invalidTargetColor, 0.1f);
-
+                Debug.DrawRay(playerCamera.transform.position, playerCamera.transform.forward * maxGrappleDistance, invalidTargetColor, 0.1f);
                 if (isFirstTargetSelected)
                     Debug.Log("Clearing first target — no valid second target");
                 else
                     Debug.Log("No valid grapple target detected");
-
                 isFirstTargetSelected = false;
             }
             return;
@@ -115,7 +102,6 @@ public class GrappleRight : MonoBehaviour
         bool aIsAnchor = (anchorLayer.value & (1 << hitA.collider.gameObject.layer)) != 0;
         bool bIsAnchor = (anchorLayer.value & (1 << hitB.collider.gameObject.layer)) != 0;
 
-        // if both are anchors, just draw a visual line
         if (aIsAnchor && bIsAnchor)
         {
             if (enableDebug)
@@ -132,7 +118,6 @@ public class GrappleRight : MonoBehaviour
         }
         else
         {
-            // neither or both anchors → treat second as anchor
             hostHit = hitA;
             anchorHit = hitB;
         }
@@ -146,7 +131,6 @@ public class GrappleRight : MonoBehaviour
         spring.autoConfigureConnectedAnchor = false;
         spring.enableCollision = true;
 
-        // pick anchors based on centerGrappleLayer
         spring.anchor = ((centerGrappleLayer.value & (1 << hostHit.collider.gameObject.layer)) != 0)
             ? Vector3.zero
             : hostHit.transform.InverseTransformPoint(hostHit.point);
@@ -162,6 +146,12 @@ public class GrappleRight : MonoBehaviour
         lr.startWidth = lr.endWidth = 0.1f;
 
         activeGrapples.Add(new GrapplePair(hostRb, anchorRb, spring, lr));
+
+        // Notify enemies they're grappled
+        var hostEnemy = hostRb.GetComponent<EnemyShooter>();
+        var anchorEnemy = anchorRb != null ? anchorRb.GetComponent<EnemyShooter>() : null;
+        if (hostEnemy != null) hostEnemy.IsGrappled = true;
+        if (anchorEnemy != null) anchorEnemy.IsGrappled = true;
 
         if (enableDebug)
         {
@@ -186,14 +176,7 @@ public class GrappleRight : MonoBehaviour
         lr.material = lineMaterial;
         lr.startWidth = lr.endWidth = 0.1f;
 
-        activeGrapples.Add(new GrapplePair(
-            hitA.rigidbody,
-            hitB.rigidbody,
-            null,    // no spring
-            lr,
-            localA,
-            localB
-        ));
+        activeGrapples.Add(new GrapplePair(hitA.rigidbody, hitB.rigidbody, null, lr, localA, localB));
     }
 
     void HandleGrappleRelease()
@@ -208,7 +191,13 @@ public class GrappleRight : MonoBehaviour
         {
             if (pair.springJoint != null) Destroy(pair.springJoint);
             if (pair.lineRenderer != null) Destroy(pair.lineRenderer.gameObject);
+
+            var enemyA = pair.objectA?.GetComponent<EnemyShooter>();
+            var enemyB = pair.objectB?.GetComponent<EnemyShooter>();
+            if (enemyA != null) enemyA.IsGrappled = false;
+            if (enemyB != null) enemyB.IsGrappled = false;
         }
+
         activeGrapples.Clear();
         isFirstTargetSelected = false;
     }
@@ -251,7 +240,6 @@ public class GrappleRight : MonoBehaviour
         }
     }
 
-    // --- nested helper type ---
     private class GrapplePair
     {
         public Rigidbody objectA;
