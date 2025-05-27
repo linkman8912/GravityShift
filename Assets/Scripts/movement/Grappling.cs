@@ -6,6 +6,8 @@ public class Grappling : MonoBehaviour {
   private Vector3 grapplePoint;
   public LayerMask whatIsGrappleable;
   public KeyCode grappleKey = KeyCode.Mouse1;
+  public KeyCode pullKey = KeyCode.Tab;
+  public float pullSpeed = 50f;
   public Transform gunTip, camera, player;
   public float maxDistance = 100000f;
   private SpringJoint joint;
@@ -22,6 +24,10 @@ public class Grappling : MonoBehaviour {
     else if(Input.GetKeyUp(grappleKey)) {
       StopGrapple();
     } 
+    if (isGrappling() && Input.GetKey(pullKey)) {
+      joint.maxDistance -= pullSpeed * Time.deltaTime;
+      joint.minDistance -= pullSpeed * Time.deltaTime;
+    }
   }
 
   void LateUpdate() {
