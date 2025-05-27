@@ -10,27 +10,33 @@ public enum WaterState
     Electrified = 1 << 2
 }
 
-[RequireComponent(typeof(Collider), typeof(Renderer))]
+[RequireComponent(typeof(Collider), typeof(MeshRenderer))]
 public class WaterBehaviour : MonoBehaviour, IInteractable
 {
     public InteractionCategory Category => InteractionCategory.Water;
 
     [Header("Visuals")]
-    public Material normalMat;
-    public Material heatedMat;
-    public Material boiledMat;
-    public Material electrifiedMat;
-    public Material heatedElectrifiedMat;    // when both Heated and Electrified
-    public Material boiledElectrifiedMat;    // when both Boiled and Electrified
+    [Tooltip("Materials to use when in the normal state.")]
+    public Material[] normalMats;
+    [Tooltip("Materials to use when only Heated.")]
+    public Material[] heatedMats;
+    [Tooltip("Materials to use when only Boiled.")]
+    public Material[] boiledMats;
+    [Tooltip("Materials to use when only Electrified.")]
+    public Material[] electrifiedMats;
+    [Tooltip("Materials to use when Heated + Electrified.")]
+    public Material[] heatedElectrifiedMats;
+    [Tooltip("Materials to use when Boiled + Electrified.")]
+    public Material[] boiledElectrifiedMats;
 
     [Header("State")]
     public WaterState currentState = WaterState.None;
 
-    private Renderer _rend;
+    private MeshRenderer _rend;
 
     void Awake()
     {
-        _rend = GetComponent<Renderer>();
+        _rend = GetComponent<MeshRenderer>();
         ApplyVisual();
     }
 
@@ -76,16 +82,19 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
 
     private void ApplyVisual()
     {
-        bool he = currentState.HasFlag(WaterState.Heated);
-        bool bo = currentState.HasFlag(WaterState.Boiled);
-        bool el = currentState.HasFlag(WaterState.Electrified);
-
-        if (bo && el) _rend.material = boiledElectrifiedMat;
-        else if (he && el) _rend.material = heatedElectrifiedMat;
-        else if (bo) _rend.material = boiledMat;
-        else if (he) _rend.material = heatedMat;
-        else if (el) _rend.material = electrifiedMat;
-        else _rend.material = normalMat;
+        // Pick the correct material array based on the current flags
+        if (currentState.HasFlag(WaterState.Boiled) && currentState.HasFlag(WaterState.Electrified))
+            _rend.materials = boiledElectrifiedMats;
+        else if (currentState.HasFlag(WaterState.Heated) && currentState.HasFlag(WaterState.Electrified))
+            _rend.materials = heatedElectrifiedMats;
+        else if (currentState.HasFlag(WaterState.Boiled))
+            _rend.materials = boiledMats;
+        else if (currentState.HasFlag(WaterState.Heated))
+            _rend.materials = heatedMats;
+        else if (currentState.HasFlag(WaterState.Electrified))
+            _rend.materials = electrifiedMats;
+        else
+            _rend.materials = normalMats;
     }
 
     /// <summary>
@@ -97,5 +106,4 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
         ApplyVisual();
         Debug.Log($"🔄 {name} reset to normal.");
     }
-
 }

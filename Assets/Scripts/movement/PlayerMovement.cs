@@ -114,7 +114,12 @@ public class PlayerMovement : MonoBehaviour
         transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
     }
 
-    private void Movement() {
+    private void Movement()
+    {
+        if (wallrunning)
+        {
+            return;
+        }
         //Extra gravity
         //rb.AddForce(Vector3.down * Time.deltaTime * 60);
 
@@ -292,3 +297,4 @@ public class PlayerMovement : MonoBehaviour
         orientation.rotation = Quaternion.Euler(0f, yaw, 0f);
     }
 }
+>>>>>>> 7754ad9ae49deaa7919e164821739bbd3622bb66
