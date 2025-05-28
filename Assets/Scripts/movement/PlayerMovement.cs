@@ -6,18 +6,18 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
 
-    //Assignables
+    [Header("Assignables")]
     public Transform playerCam;
     public Transform orientation;
 
     //Other
     private Rigidbody rb;
 
-    //Rotation and look
+    [Header("Rotation and look")]
     private float xRotation;
     public float sensitivity = 300f;
 
-    //Movement
+    [Header("Movement")]
     public float moveSpeed = 950f;
     public float maxSpeed = 400f;
     [HideInInspector] public bool grounded;
@@ -29,17 +29,21 @@ public class PlayerMovement : MonoBehaviour
     private float threshold = 0.01f;
     public float maxSlopeAngle = 35f;
 
-    //Crouch & Slide
+    [Header("Crouch & Slide")]
     private Vector3 crouchScale = new Vector3(1, 0.5f, 1);
     private Vector3 playerScale;
     public float slideForce = 9f;
     public float slideCounterMovement = 0.2f;
 
-    //Jumping
+    [Header("Jumping")]
     private bool readyToJump = true;
     private bool secondJump = true;
     private float jumpCooldown = 0.25f;
     public float jumpForce = 200;
+
+    [Header("Ground Slam")]
+    [SerializeField] private float slamForce = 500f;
+    private bool slamming = false;
 
     //Input
     float x, y;
@@ -67,6 +71,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     private void Update() {
+        Debug.Log(slamming);
         MyInput();
         //Look();
     }
@@ -86,8 +91,10 @@ public class PlayerMovement : MonoBehaviour
         crouching = Input.GetKey(KeyCode.LeftControl);
 
         //Crouching
-        if (Input.GetKeyDown(KeyCode.LeftControl))
+        if (Input.GetKeyDown(KeyCode.LeftControl) && grounded && !slamming)
             StartCrouch();
+        if (Input.GetKeyDown(KeyCode.LeftControl) && !grounded && !slamming)
+            StartSlam();
         if (Input.GetKeyUp(KeyCode.LeftControl))
             StopCrouch();
     }
@@ -108,10 +115,6 @@ public class PlayerMovement : MonoBehaviour
     }
 
     private void Movement() {
-        if (wallrunning)
-        {
-            return;
-        }
         //Extra gravity
         //rb.AddForce(Vector3.down * Time.deltaTime * 60);
 
@@ -157,7 +160,12 @@ public class PlayerMovement : MonoBehaviour
         // Movement while sliding
         if (grounded && crouching) multiplierV = 0f;
 
-        if (!wallrunning) {
+        if (slamming && grounded) StopSlam();
+        else if (slamming) {
+          rb.velocity = new Vector3(0f, -100, 0f);
+        }
+
+        if (!wallrunning && !slamming) {
         //Apply forces to move player
           rb.AddForce(orientation.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
           rb.AddForce(orientation.right * x * moveSpeed * Time.deltaTime * multiplier);
@@ -266,9 +274,17 @@ public class PlayerMovement : MonoBehaviour
     }
 
     private void StopGrounded() {
-        grounded = false;
+      grounded = false;
     }
 
+    private void StartSlam() { 
+      slamming = true;
+      StopCrouch();
+    }
+
+    private void StopSlam() { 
+      slamming = false;
+    }
 
     private void Look() {
         float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime;
