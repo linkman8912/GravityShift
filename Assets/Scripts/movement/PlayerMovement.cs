@@ -37,12 +37,13 @@ public class PlayerMovement : MonoBehaviour
 
     //Jumping
     private bool readyToJump = true;
+    private bool secondJump = true;
     private float jumpCooldown = 0.25f;
     public float jumpForce = 200;
 
     //Input
     float x, y;
-    bool jumping, sprinting, crouching;
+    bool jumping, doubleJumping, sprinting, crouching;
 
     //Sliding
     private Vector3 normalVector = Vector3.up;
@@ -63,13 +64,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate() {
         Movement();
-        //CapSpeed();
-        /*if (grounded) {
-          rb.drag = groundDrag;
-        }
-        else {
-          rb.drag = 0f;
-        }*/
     }
 
     private void Update() {
@@ -88,6 +82,7 @@ public class PlayerMovement : MonoBehaviour
         x = Input.GetAxisRaw("Horizontal");
         y = Input.GetAxisRaw("Vertical");
         jumping = Input.GetButton("Jump");
+        doubleJumping = Input.GetButtonDown("Jump");
         crouching = Input.GetKey(KeyCode.LeftControl);
 
         //Crouching
@@ -133,6 +128,7 @@ public class PlayerMovement : MonoBehaviour
 
         //If holding jump && ready to jump, then jump
         if (readyToJump && jumping) Jump();
+        if (readyToJump && doubleJumping && !grounded) Jump(true);
 
         //Set max speed
         float maxSpeed = this.maxSpeed;
@@ -168,8 +164,13 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    private void Jump() {
-        if (grounded && readyToJump) {
+    private void Jump(bool dj = false) {
+        bool canJump = false;
+        if (dj && secondJump && readyToJump) canJump = true;
+        else if (!dj && grounded && readyToJump) canJump = true;
+
+        if (canJump) {
+            if (dj) secondJump = false;
             readyToJump = false;
 
             //Add jump forces
@@ -249,6 +250,7 @@ public class PlayerMovement : MonoBehaviour
             //FLOOR
             if (IsFloor(normal)) {
                 grounded = true;
+                secondJump = true;
                 cancellingGrounded = false;
                 normalVector = normal;
                 CancelInvoke(nameof(StopGrounded));
