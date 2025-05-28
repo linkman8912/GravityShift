@@ -71,7 +71,6 @@ public class PlayerMovement : MonoBehaviour
   }
 
   private void Update() {
-    Debug.Log(slamming);
     MyInput();
     //Look();
   }
@@ -125,6 +124,7 @@ public class PlayerMovement : MonoBehaviour
     //Counteract sliding and sloppy movement
     //CounterMovement(x, y, mag);
     if (!wallrunning) {
+      rb.useGravity = true;
       rb.AddForce(Vector3.down * Time.deltaTime * 60);
       CounterMovement(x, y, mag);
     }

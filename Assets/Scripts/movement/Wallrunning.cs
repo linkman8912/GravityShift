@@ -7,7 +7,7 @@ public class Wallrunning : MonoBehaviour
   [Header("Wallrunning")]
   [SerializeField] private LayerMask whatIsWall;
   private LayerMask whatIsGround;
-  [SerializeField] private float wallRunForce = 500;
+  [SerializeField] private float wallRunForce = 200;
   [SerializeField] private float maxWallrunTime = 1.5f;
   //[SerializeField] private float walljumpDelayTime = 0.75f;
   private float wallrunTimer;
@@ -42,12 +42,6 @@ public class Wallrunning : MonoBehaviour
   // Update is called once per frame
   void Update() {
     StateMachine();
-    /*if (walljumpDelayTimer > 0)
-      walljumpDelayTimer -= Time.deltaTime;
-      else if (walljumpDelayTimer < 0)
-      walljumpDelayTimer = 0;
-      */
-    //Debug.Log(walljumpDelayTimer);
   }
 
   void FixedUpdate() {
@@ -74,6 +68,7 @@ public class Wallrunning : MonoBehaviour
       if(!pm.wallrunning) {
         StartWallrun();
       }
+      WallrunningMovement();
       if (wallrunTimer < maxWallrunTime) {
         wallrunTimer += Time.deltaTime;
       }
@@ -96,6 +91,7 @@ public class Wallrunning : MonoBehaviour
 
   }
   void WallrunningMovement() {
+    Debug.Log("wallrunning movement");
     rb.useGravity = false;
     rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
     Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
