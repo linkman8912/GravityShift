@@ -44,9 +44,9 @@ public class Wallrunning : MonoBehaviour
     StateMachine();
     /*if (walljumpDelayTimer > 0)
       walljumpDelayTimer -= Time.deltaTime;
-    else if (walljumpDelayTimer < 0)
+      else if (walljumpDelayTimer < 0)
       walljumpDelayTimer = 0;
-    */
+      */
     //Debug.Log(walljumpDelayTimer);
   }
 
@@ -58,8 +58,8 @@ public class Wallrunning : MonoBehaviour
     wallRight = Physics.Raycast(transform.position, orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
     wallLeft = Physics.Raycast(transform.position, -orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
   }
-  
-  
+
+
   private bool AboveGround() {
     return !Physics.Raycast(transform.position, Vector3.down, minJumpHeight, whatIsGround);
   }
@@ -112,7 +112,7 @@ public class Wallrunning : MonoBehaviour
     pm.wallrunning = false;
     //Debug.Log("Stopping wallrun");
   }
-  
+
   void Walljump() {
     //Debug.Log("Walljump");
     Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
