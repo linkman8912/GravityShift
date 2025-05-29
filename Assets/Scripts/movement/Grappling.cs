@@ -34,52 +34,52 @@ public class Grappling : MonoBehaviour {
     DrawRope();
   }
 
-    void StartGrapple()
+  void StartGrapple()
+  {
+    RaycastHit hit;
+    // 1) pass your LayerMask into the Raycast call:
+    if (Physics.Raycast(
+          origin: camera.position,
+          direction: camera.forward,
+          out hit,
+          maxDistance,
+          whatIsGrappleable  // <-- mask excludes your Player layer!
+          ))
     {
-        RaycastHit hit;
-        // 1) pass your LayerMask into the Raycast call:
-        if (Physics.Raycast(
-              origin: camera.position,
-              direction: camera.forward,
-              out hit,
-              maxDistance,
-              whatIsGrappleable  // <-- mask excludes your Player layer!
-           ))
-        {
-            // 2) sanity-check that you didn't still hit your own player transform:
-            if (hit.collider.transform.root == player.transform)
-            {
-                Debug.Log("Grapple hit player – ignoring.");
-                return;
-            }
+      // 2) sanity-check that you didn't still hit your own player transform:
+      if (hit.collider.transform.root == player.transform)
+      {
+        Debug.Log("Grapple hit player – ignoring.");
+        return;
+      }
 
-            // ––––– existing grapple hookup code –––––
-            grapplePoint = hit.point;
-            joint = player.gameObject.AddComponent<SpringJoint>();
-            joint.autoConfigureConnectedAnchor = false;
-            joint.connectedAnchor = grapplePoint;
-            float distanceFromPoint = Vector3.Distance(player.position, grapplePoint);
-            joint.maxDistance = distanceFromPoint * 0.8f;
-            joint.minDistance = distanceFromPoint * 0.25f;
-            joint.spring = 4.5f;
-            joint.damper = 7f;
-            joint.massScale = 4.5f;
-            lr.positionCount = 2;
-        }
+      // ––––– existing grapple hookup code –––––
+      grapplePoint = hit.point;
+      joint = player.gameObject.AddComponent<SpringJoint>();
+      joint.autoConfigureConnectedAnchor = false;
+      joint.connectedAnchor = grapplePoint;
+      float distanceFromPoint = Vector3.Distance(player.position, grapplePoint);
+      joint.maxDistance = distanceFromPoint * 0.8f;
+      joint.minDistance = distanceFromPoint * 0.25f;
+      joint.spring = 4.5f;
+      joint.damper = 7f;
+      joint.massScale = 4.5f;
+      lr.positionCount = 2;
     }
+  }
 
 
-    void StopGrapple() {
+  void StopGrapple() {
     lr.positionCount = 0;
     Destroy(joint);
   }
-  
+
   void DrawRope() {
     // don't draw if not grappling
     if (!joint) return;
     lr.SetPosition(0, gunTip.position);
     lr.SetPosition(1, grapplePoint);
-    
+
   }
   public bool isGrappling() {
     return joint != null;
