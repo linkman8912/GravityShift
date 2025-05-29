@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class EnemyShooter : MonoBehaviour
 {
+    [Header("References")]
     public Transform player;
     public GameObject projectilePrefab;
     public Transform firePoint;
@@ -21,23 +23,25 @@ public class EnemyShooter : MonoBehaviour
     public LayerMask groundLayer;
 
     [Header("Advanced Ragdoll Control")]
-    [Tooltip("Surfaces that, if touched during ragdoll entry, delay the start of the ragdoll timer.")]
+    [Tooltip("Layers that block recovery (and reset the initial delay).")]
     public LayerMask disableRecoveryLayer;
-    [Tooltip("How long to wait after entering ragdoll (and after last disable layer touch) before the ragdoll-duration timer runs.")]
+
+    [Header("Recovery Delay Settings")]
+    [Tooltip("How long after hitting the ground before the ragdoll-duration timer even begins.")]
     public float recoveryDelayDuration = 3f;
 
+    // internals
     private Rigidbody rb;
     private bool isRagdoll = false;
-    private bool isGrounded = false;
-
-    //–– New fields for staggered ragdoll timing ––
+    private bool isRecoveryDelayActive = false;
     private float recoveryDelayTimer = 0f;
-    private bool waitingForRecoveryDelay = false;
-    private bool ragdollTimerActive = false;
     private float ragdollTimer = 0f;
+    private bool isGrounded = false;
+    private float fireCooldown = 0f;
+    private HashSet<Collider> collisionStayObjects = new HashSet<Collider>();
+    private int recoveryBlockContacts = 0;
 
     public bool IsGrappled { get; set; } = false;
-    private float fireCooldown;
 
     void Awake()
     {
@@ -46,49 +50,58 @@ public class EnemyShooter : MonoBehaviour
 
     void Update()
     {
+        // Debug state each frame
+        Debug.Log($"[State] Ragdoll={isRagdoll}, DelayActive={isRecoveryDelayActive}, " +
+                  $"DelayT={recoveryDelayTimer:F2}, RagdollT={ragdollTimer:F2}, " +
+                  $"Grounded={isGrounded}, Blocked={IsBlockedFromRecovery()}, Grappled={IsGrappled}");
+
         if (isRagdoll)
         {
-            // 1) While in “delay” period, count down that delay
-            if (waitingForRecoveryDelay)
+            // ————— PHASE 1: INITIAL DELAY BEFORE RAGDOLL DURATION —————
+            if (isRecoveryDelayActive)
             {
-                recoveryDelayTimer -= Time.deltaTime;
-                Debug.Log($"[RecoveryDelay] {recoveryDelayTimer:F2}s remaining before ragdoll timer starts.");
+                // if still touching a disable-recovery object, reset the delay
+                if (IsBlockedFromRecovery())
+                {
+                    recoveryDelayTimer = recoveryDelayDuration;
+                }
+                else
+                {
+                    recoveryDelayTimer -= Time.deltaTime;
+                }
 
                 if (recoveryDelayTimer <= 0f)
                 {
-                    waitingForRecoveryDelay = false;
-                    ragdollTimerActive = true;
+                    isRecoveryDelayActive = false;
                     ragdollTimer = ragdollDuration;
-                    Debug.Log("[RecoveryDelay] Delay elapsed. Starting ragdoll-duration timer.");
+                    Debug.Log("[RecoveryDelay] elapsed; starting ragdoll-duration timer.");
                 }
                 return;
             }
 
-            // 2) Once ragdoll-duration has begun, count it down
-            if (ragdollTimerActive)
+            // ————— PHASE 2: RAGDOLL DURATION COUNTDOWN —————
+            ragdollTimer -= Time.deltaTime;
+            if (ragdollTimer > 0f)
             {
-                ragdollTimer -= Time.deltaTime;
-                Debug.Log($"[RagdollTimer] {ragdollTimer:F2}s remaining until recovery.");
-
-                if (ragdollTimer <= 0f && !IsGrappled && isGrounded)
-                {
-                    RecoverFromRagdoll();
-                }
+                Debug.Log($"[RagdollTimer] {ragdollTimer:F2}s remaining.");
             }
-
+            else if (!IsGrappled && isGrounded && !IsBlockedFromRecovery())
+            {
+                Debug.Log("[Recovery] Conditions met; recovering.");
+                RecoverFromRagdoll();
+            }
             return;
         }
 
+        // ————— Normal AI when not ragdolled —————
         if (player == null) return;
 
-        // Enter ragdoll if we tip over too far
         if (IsTilted())
         {
             EnterRagdoll();
             return;
         }
 
-        // Otherwise: normal AI behavior
         RotateBodyTowardsPlayer();
         RotateFirePointTowardsPlayer();
         HandleShooting();
@@ -96,57 +109,72 @@ public class EnemyShooter : MonoBehaviour
 
     bool IsTilted()
     {
-        float angle = Vector3.Angle(transform.up, Vector3.up);
-        return angle > tiltThreshold;
+        return Vector3.Angle(transform.up, Vector3.up) > tiltThreshold;
     }
 
-    void OnCollisionEnter(Collision collision)
+    bool IsBlockedFromRecovery()
+    {
+        return recoveryBlockContacts > 0;
+    }
+
+    void OnCollisionStay(Collision collision)
     {
         int layer = collision.gameObject.layer;
 
-        // Ground check
+        // ground detection
         if (((1 << layer) & groundLayer) != 0)
-        {
             isGrounded = true;
-        }
 
-        // If we’re in that initial ragdoll-delay window and we hit a disable-recovery surface, reset the delay
-        if (isRagdoll && waitingForRecoveryDelay &&
-            ((1 << layer) & disableRecoveryLayer) != 0)
+        // recovery-block detection
+        if (((1 << layer) & disableRecoveryLayer) != 0 &&
+            !collisionStayObjects.Contains(collision.collider))
         {
-            recoveryDelayTimer = recoveryDelayDuration;
-            Debug.Log("[DisableRecovery] Resetting recovery-delay timer to full duration.");
+            collisionStayObjects.Add(collision.collider);
+            recoveryBlockContacts++;
         }
     }
 
     void OnCollisionExit(Collision collision)
     {
         int layer = collision.gameObject.layer;
+
         if (((1 << layer) & groundLayer) != 0)
-        {
             isGrounded = false;
+
+        if (((1 << layer) & disableRecoveryLayer) != 0 &&
+            collisionStayObjects.Contains(collision.collider))
+        {
+            collisionStayObjects.Remove(collision.collider);
+            recoveryBlockContacts = Mathf.Max(0, recoveryBlockContacts - 1);
         }
     }
 
     void EnterRagdoll()
     {
-        Debug.Log("[EnterRagdoll] Entering ragdoll.");
-
+        Debug.Log("[EnterRagdoll] Entering ragdoll state.");
         isRagdoll = true;
-        waitingForRecoveryDelay = true;
+        isRecoveryDelayActive = true;
         recoveryDelayTimer = recoveryDelayDuration;
-        ragdollTimerActive = false;
+        // set up for both phases:
+        ragdollTimer = ragdollDuration;
 
-        rb.constraints = RigidbodyConstraints.None;
         rb.useGravity = true;
+        rb.constraints = RigidbodyConstraints.None;
     }
+
+    private IEnumerator ReleaseRotationLockAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        // Allow full physics again so they can tilt/ragdoll
+        rb.constraints = RigidbodyConstraints.None;
+        Debug.Log("[Recovery] Rotation locks released — can ragdoll again.");
+    }
+
 
     void RecoverFromRagdoll()
     {
-        Debug.Log("[Recover] Conditions met—recovering from ragdoll.");
         isRagdoll = false;
-        ragdollTimerActive = false;
-
+        isRecoveryDelayActive = false;
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         StartCoroutine(SmoothRecovery(3f));
@@ -159,7 +187,6 @@ public class EnemyShooter : MonoBehaviour
         float elapsed = 0f;
 
         rb.constraints = RigidbodyConstraints.None;
-
         while (elapsed < duration)
         {
             rb.rotation = Quaternion.Slerp(startRot, targetRot, elapsed / duration);
@@ -167,31 +194,45 @@ public class EnemyShooter : MonoBehaviour
             yield return null;
         }
 
+        // snap upright & nudge down
         rb.rotation = targetRot;
+        rb.velocity = new Vector3(rb.velocity.x, -0.1f, rb.velocity.z);
         rb.useGravity = true;
         rb.WakeUp();
-        rb.constraints = RigidbodyConstraints.None;
 
-        Debug.Log("[SmoothRecovery] Completed upright rotation.");
+        // freeze X/Z so we stay standing
+        rb.constraints = RigidbodyConstraints.FreezeRotationX
+                       | RigidbodyConstraints.FreezeRotationZ;
+
+        // **after 1 second**, remove those locks so tilt can happen again
+        StartCoroutine(ReleaseRotationLockAfterDelay(1f));
+
+        Debug.Log("[SmoothRecovery] Upright and locked for 1s, then will re-enable ragdoll.");
     }
+
+
 
     void RotateBodyTowardsPlayer()
     {
         Vector3 dir = player.position - transform.position;
         dir.y = 0f;
-        if (dir == Vector3.zero) return;
+        if (dir.sqrMagnitude < 0.001f) return;
 
-        Quaternion lookRot = Quaternion.LookRotation(dir);
-        transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, bodyRotationSpeed * Time.deltaTime);
+        Quaternion look = Quaternion.LookRotation(dir);
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation, look, bodyRotationSpeed * Time.deltaTime
+        );
     }
 
     void RotateFirePointTowardsPlayer()
     {
         Vector3 dir = player.position - firePoint.position;
-        if (dir == Vector3.zero) return;
+        if (dir.sqrMagnitude < 0.001f) return;
 
-        Quaternion targetRotation = Quaternion.LookRotation(dir.normalized);
-        firePoint.rotation = Quaternion.Slerp(firePoint.rotation, targetRotation, firePointRotationSpeed * Time.deltaTime);
+        Quaternion look = Quaternion.LookRotation(dir.normalized);
+        firePoint.rotation = Quaternion.Slerp(
+            firePoint.rotation, look, firePointRotationSpeed * Time.deltaTime
+        );
     }
 
     void HandleShooting()
@@ -207,10 +248,8 @@ public class EnemyShooter : MonoBehaviour
     void Shoot()
     {
         if (projectilePrefab == null) return;
-
-        GameObject proj = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
-        Rigidbody projRb = proj.GetComponent<Rigidbody>();
-        if (projRb != null)
-            projRb.velocity = firePoint.forward * projectileSpeed;
+        GameObject p = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
+        if (p.TryGetComponent<Rigidbody>(out var prb))
+            prb.velocity = firePoint.forward * projectileSpeed;
     }
 }
