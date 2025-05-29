@@ -9,6 +9,7 @@ public class Wallrunning : MonoBehaviour
   private LayerMask whatIsGround;
   [SerializeField] private float wallRunForce = 200;
   [SerializeField] private float maxWallrunTime = 1.5f;
+  [SerializeField] private float wallMomentumAngle = 40;
   //[SerializeField] private float walljumpDelayTime = 0.75f;
   private float wallrunTimer;
   //private float walljumpDelayTimer;
@@ -99,6 +100,9 @@ public class Wallrunning : MonoBehaviour
 
     if((orientation.forward - wallForward).magnitude > (orientation.forward - -wallForward).magnitude)
       wallForward = -wallForward;
+    if (Vector3.Angle(rb.velocity.normalized, wallForward) <= wallMomentumAngle) {
+      rb.velocity = rb.velocity.magnitude * wallForward;
+    }
 
     // forward force
     rb.AddForce(wallForward * wallRunForce, ForceMode.Force);
