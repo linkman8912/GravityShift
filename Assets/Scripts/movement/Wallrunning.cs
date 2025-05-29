@@ -32,9 +32,12 @@ public class Wallrunning : MonoBehaviour
   private bool wallRight;
   [Header("References")]
   public Transform orientation;
+  public Transform camera;
   private PlayerMovement pm;
   private Rigidbody rb;
-
+  [Header("Visual")]
+  [SerializeField] private float cameraLeanAngle = 15f;
+  [SerializeField] private float cameraLeanSpeed = 5f;
 
   // Start is called before the first frame update
   void Start() {
@@ -136,5 +139,21 @@ public class Wallrunning : MonoBehaviour
   void ResetWallrunDelay() {
     Debug.Log("ready to wallrun");
     readyToWallrun = true;
+  }
+
+  void LeanCamera() {
+    float targetLean = 0f;
+    Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+    if (pm.wallrunning) {
+      // Determine which side the wall is relative to the player.
+      targetLean = wallRight ? cameraLeanAngle : -cameraLeanAngle;
+    }
+    Vector3 camEuler = camera.localEulerAngles;
+    float currentLean = camEuler.z;
+    if (currentLean > 180f)
+      currentLean -= 360f; // Convert to -180...180 range.
+    float newLean = Mathf.Lerp(currentLean, targetLean, Time.deltaTime * cameraLeanSpeed);
+    camEuler.z = newLean;
+    camera.localEulerAngles = camEuler;
   }
 }
