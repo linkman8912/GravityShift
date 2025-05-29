@@ -3740,6 +3740,11 @@ PrefabInstance:
       propertyPath: moveSpeed
       value: 700
       objectReference: {fileID: 0}
+    - target: {fileID: 3274560924186316928, guid: 0f2d5676f5279474ea1462ea7ac85f12,
+        type: 3}
+      propertyPath: softCapFactor
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 3899274780960977910, guid: 0f2d5676f5279474ea1462ea7ac85f12,
         type: 3}
       propertyPath: m_Name

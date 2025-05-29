@@ -25,6 +25,8 @@ public class PlayerMovement : MonoBehaviour
   public LayerMask whatIsGround;
   public float wallrunSpeed = 200f;
   [SerializeField] float softCapFactor = 8f;
+  private int groundedFrameCount = 0;
+  private const int groundFramesRequired = 3;
 
   public float counterMovement = 0.175f;
   private float threshold = 0.01f;
@@ -68,6 +70,10 @@ public class PlayerMovement : MonoBehaviour
 
 
   private void FixedUpdate() {
+    if (grounded)
+      groundedFrameCount++;
+    else
+      groundedFrameCount = 0;
     Movement();
   }
 
@@ -171,7 +177,7 @@ public class PlayerMovement : MonoBehaviour
       rb.AddForce(orientation.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
       rb.AddForce(orientation.right * x * moveSpeed * Time.deltaTime * multiplier);
     }
-    if (grounded) {
+    if (grounded && groundedFrameCount >= groundFramesRequired) {
       Vector3 horiz = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
       float speed = horiz.magnitude;
       float excess = speed - maxSpeed;
