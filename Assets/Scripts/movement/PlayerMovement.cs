@@ -42,7 +42,7 @@ public class PlayerMovement : MonoBehaviour
   public float jumpForce = 200;
 
   [Header("Ground Slam")]
-  [SerializeField] private float slamForce = 500f;
+  [SerializeField] private float slamVelocity = 100f;
   private bool slamming = false;
 
   //Input
@@ -162,7 +162,7 @@ public class PlayerMovement : MonoBehaviour
 
     if (slamming && grounded) StopSlam();
     else if (slamming) {
-      rb.velocity = new Vector3(0f, -100, 0f);
+      rb.velocity = new Vector3(0f, -slamVelocity, 0f);
     }
 
     if (!wallrunning && !slamming) {
@@ -177,7 +177,11 @@ public class PlayerMovement : MonoBehaviour
     if ((dj && secondJump && readyToJump) || (!dj && grounded && readyToJump)) canJump = true;
 
     if (canJump) {
-      if (dj) secondJump = false;
+      if (dj) {
+        secondJump = false;
+        if (FindVelRelativeToLook().y < 0) 
+          rb.velocity = new Vector3(0, 0, 0);
+      }
       readyToJump = false;
 
       //Add jump forces
