@@ -2816,6 +2816,7 @@ MonoBehaviour:
   disableRecoveryLayer:
     serializedVersion: 2
     m_Bits: 4096
+  recoveryDelayDuration: 3
 --- !u!114 &2061659199
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3153,7 +3154,7 @@ PrefabInstance:
     - target: {fileID: 3274560924186316928, guid: 0f2d5676f5279474ea1462ea7ac85f12,
         type: 3}
       propertyPath: maxSpeed
-      value: 100
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 3274560924186316928, guid: 0f2d5676f5279474ea1462ea7ac85f12,
         type: 3}
@@ -3163,7 +3164,7 @@ PrefabInstance:
     - target: {fileID: 3274560924186316928, guid: 0f2d5676f5279474ea1462ea7ac85f12,
         type: 3}
       propertyPath: moveSpeed
-      value: 1000
+      value: 700
       objectReference: {fileID: 0}
     - target: {fileID: 3899274780960977910, guid: 0f2d5676f5279474ea1462ea7ac85f12,
         type: 3}
