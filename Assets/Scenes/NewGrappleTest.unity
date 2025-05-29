@@ -3140,6 +3140,11 @@ PrefabInstance:
       propertyPath: wallCheckDistance
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 1102010051754747617, guid: 0f2d5676f5279474ea1462ea7ac85f12,
+        type: 3}
+      propertyPath: wallMomentumAngle
+      value: 60
+      objectReference: {fileID: 0}
     - target: {fileID: 1235218470646968246, guid: 0f2d5676f5279474ea1462ea7ac85f12,
         type: 3}
       propertyPath: holdPosition
