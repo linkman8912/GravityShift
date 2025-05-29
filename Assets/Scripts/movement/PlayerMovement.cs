@@ -24,6 +24,7 @@ public class PlayerMovement : MonoBehaviour
   [HideInInspector] public bool wallrunning = false;
   public LayerMask whatIsGround;
   public float wallrunSpeed = 200f;
+  [SerializeField] float softCapFactor = 8f;
 
   public float counterMovement = 0.175f;
   private float threshold = 0.01f;
@@ -42,7 +43,7 @@ public class PlayerMovement : MonoBehaviour
   public float jumpForce = 200;
 
   [Header("Ground Slam")]
-  [SerializeField] private float slamForce = 500f;
+  [SerializeField] private float slamVelocity = 100f;
   private bool slamming = false;
 
   //Input
@@ -143,18 +144,18 @@ public class PlayerMovement : MonoBehaviour
     }
 
     //If speed is larger than maxspeed, cancel out the input so you don't go over max speed
-    if (x > 0 && xMag > maxSpeed) x = 0;
+    /*if (x > 0 && xMag > maxSpeed) x = 0;
     if (x < 0 && xMag < -maxSpeed) x = 0;
     if (y > 0 && yMag > maxSpeed) y = 0;
-    if (y < 0 && yMag < -maxSpeed) y = 0;
+    if (y < 0 && yMag < -maxSpeed) y = 0;*/
 
     //Some multipliers
     float multiplier = 1f, multiplierV = 1f;
 
     // Movement in air
     if (!grounded) {
-      multiplier = 0.5f;
-      multiplierV = 0.5f;
+      multiplier = 0.2f;
+      multiplierV = 0.2f;
     }
 
     // Movement while sliding
@@ -162,13 +163,24 @@ public class PlayerMovement : MonoBehaviour
 
     if (slamming && grounded) StopSlam();
     else if (slamming) {
-      rb.velocity = new Vector3(0f, -100, 0f);
+      rb.velocity = new Vector3(0f, -slamVelocity, 0f);
     }
 
     if (!wallrunning && !slamming) {
       //Apply forces to move player
       rb.AddForce(orientation.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
       rb.AddForce(orientation.right * x * moveSpeed * Time.deltaTime * multiplier);
+    }
+    if (grounded) {
+      Vector3 horiz = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+      float speed = horiz.magnitude;
+      float excess = speed - maxSpeed;
+      if (excess > 0f)
+      {
+        // softCapFactor controls how “snappy” the brake is; tune it until the bleed-off feels right
+        Vector3 brake = -horiz.normalized * excess * softCapFactor;
+        rb.AddForce(brake * Time.deltaTime, ForceMode.VelocityChange);
+      }
     }
   }
 
@@ -177,7 +189,11 @@ public class PlayerMovement : MonoBehaviour
     if ((dj && secondJump && readyToJump) || (!dj && grounded && readyToJump)) canJump = true;
 
     if (canJump) {
-      if (dj) secondJump = false;
+      if (dj) {
+        secondJump = false;
+        if (FindVelRelativeToLook().y < 0) 
+          rb.velocity = new Vector3(0, 0, 0);
+      }
       readyToJump = false;
 
       //Add jump forces
@@ -219,11 +235,16 @@ public class PlayerMovement : MonoBehaviour
     }
 
     //Limit diagonal running. This will also cause a full stop if sliding fast and un-crouching, so not optimal.
-    if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed) {
+    /*if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed) {
       float fallspeed = rb.velocity.y;
       Vector3 n = rb.velocity.normalized * maxSpeed;
       rb.velocity = new Vector3(n.x, fallspeed, n.z);
-    }
+    }*/
+    //new code
+    /*Vector3 horiz = new Vector3(rb.velocity.x, 0, rb.velocity.z);
+    Vector3 clamped = Vector3.ClampMagnitude(horiz, maxSpeed);
+    rb.velocity = new Vector3(clamped.x, rb.velocity.y, clamped.z);
+    */
   }
 
   /// <summary>
