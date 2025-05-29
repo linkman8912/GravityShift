@@ -38,7 +38,7 @@ public class PlayerMovement : MonoBehaviour
   [Header("Jumping")]
   private bool readyToJump = true;
   private bool secondJump = true;
-  private float jumpCooldown = 0.25f;
+  [SerializeField] private float jumpCooldown = 0.25f;
   public float jumpForce = 200;
 
   [Header("Ground Slam")]
@@ -174,8 +174,7 @@ public class PlayerMovement : MonoBehaviour
 
   private void Jump(bool dj = false) {
     bool canJump = false;
-    if (dj && secondJump && readyToJump) canJump = true;
-    else if (!dj && grounded && readyToJump) canJump = true;
+    if ((dj && secondJump && readyToJump) || (!dj && grounded && readyToJump)) canJump = true;
 
     if (canJump) {
       if (dj) secondJump = false;
