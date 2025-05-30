@@ -11,6 +11,7 @@ public class Wallrunning : MonoBehaviour
   [SerializeField] private float maxWallrunTime = 1.5f;
   [SerializeField] private float wallMomentumAngle = 40;
   [SerializeField] private float wallrunDelay = 0.3f;
+  private float targetCameraLean;
   //[SerializeField] private float walljumpDelayTime = 0.75f;
   private float wallrunTimer;
   //private float walljumpDelayTimer;
@@ -50,6 +51,7 @@ public class Wallrunning : MonoBehaviour
   void Update() {
     StateMachine();
     if (pm.grounded) mostRecentWalljump = null;
+    HandleCameraLean();
   }
 
   void FixedUpdate() {
@@ -82,6 +84,7 @@ public class Wallrunning : MonoBehaviour
       }
       else {
         StopWallrun();
+
       }
       if (Input.GetButtonDown("Jump")) {
         StopWallrun();
@@ -95,11 +98,9 @@ public class Wallrunning : MonoBehaviour
 
   void StartWallrun() {
     pm.wallrunning = true;
-    //Debug.Log("Starting wallrun");
 
   }
   void WallrunningMovement() {
-    Debug.Log("wallrunning movement");
     rb.useGravity = false;
     rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
     Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
@@ -117,11 +118,10 @@ public class Wallrunning : MonoBehaviour
   }
   void StopWallrun() {
     pm.wallrunning = false;
-    //Debug.Log("Stopping wallrun");
+    //StopCameraLean();
   }
 
   void Walljump() {
-    //Debug.Log("Walljump");
     Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
     GameObject currentTarget = wallRight ? rightWallHit.collider.gameObject : leftWallHit.collider.gameObject;
     if (currentTarget == mostRecentWalljump) return;
@@ -137,23 +137,30 @@ public class Wallrunning : MonoBehaviour
   }
 
   void ResetWallrunDelay() {
-    Debug.Log("ready to wallrun");
     readyToWallrun = true;
   }
 
-  void LeanCamera() {
-    float targetLean = 0f;
-    Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
-    if (pm.wallrunning) {
-      // Determine which side the wall is relative to the player.
-      targetLean = wallRight ? cameraLeanAngle : -cameraLeanAngle;
-    }
-    Vector3 camEuler = camera.localEulerAngles;
-    float currentLean = camEuler.z;
-    if (currentLean > 180f)
-      currentLean -= 360f; // Convert to -180...180 range.
-    float newLean = Mathf.Lerp(currentLean, targetLean, Time.deltaTime * cameraLeanSpeed);
-    camEuler.z = newLean;
-    camera.localEulerAngles = camEuler;
+  private void HandleCameraLean() {
+    targetCameraLean = wallLeft ?  -cameraLeanAngle
+      : wallRight ? cameraLeanAngle
+      : 0f;
+    // Smoothly interpolate current local rotation towards desired lean
+    Quaternion targetRot = Quaternion.Euler(0f, 0f, targetCameraLean);
+    camera.localRotation = Quaternion.Slerp(
+        camera.localRotation,
+        targetRot,
+        cameraLeanSpeed * Time.deltaTime
+        );
   }
+
+  /*private void StopCameraLean() {
+    Debug.Log("Stop camera lean");
+    // Smoothly interpolate current local rotation towards desired lean
+    Quaternion targetRot = Quaternion.Euler(0f, 0f, -targetCameraLean);
+    camera.localRotation = Quaternion.Slerp(
+        camera.localRotation,
+        targetRot,
+        cameraLeanSpeed * Time.deltaTime
+        );
+  }*/
 }
