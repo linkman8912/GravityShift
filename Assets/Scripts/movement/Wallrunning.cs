@@ -11,11 +11,12 @@ public class Wallrunning : MonoBehaviour
   [SerializeField] private float maxWallrunTime = 1.5f;
   [SerializeField] private float wallMomentumAngle = 40;
   [SerializeField] private float wallrunDelay = 0.3f;
+  private float startingWallrunSpeed;
   private float targetCameraLean;
   //[SerializeField] private float walljumpDelayTime = 0.75f;
   private float wallrunTimer;
   //private float walljumpDelayTimer;
-  private bool readyToWallrun = true;
+  //private bool readyToWallrun = true;
   [Header("Walljumping")]
   [SerializeField] private float walljumpUpForce = 100f;
   [SerializeField] private float walljumpSideForce = 50f;
@@ -74,7 +75,7 @@ public class Wallrunning : MonoBehaviour
     verticalInput = Input.GetAxisRaw("Vertical");
 
     // state 1: wallrunning
-    if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround() && readyToWallrun) {
+    if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround() && !pm.grounded) {
       if(!pm.wallrunning) {
         StartWallrun();
       }
@@ -98,7 +99,7 @@ public class Wallrunning : MonoBehaviour
 
   void StartWallrun() {
     pm.wallrunning = true;
-
+    startingWallrunSpeed = Vector3(rb.velocity.x, 0f, rb.velocity.z).magnitude;
   }
   void WallrunningMovement() {
     rb.useGravity = false;
@@ -132,13 +133,13 @@ public class Wallrunning : MonoBehaviour
     // add force
     rb.AddForce(forceToApply, ForceMode.Impulse);
     mostRecentWalljump = currentTarget;
-    readyToWallrun = false;
-    Invoke("ResetWallrunDelay", wallrunDelay);
+    //readyToWallrun = false;
+    //Invoke("ResetWallrunDelay", wallrunDelay);
   }
 
-  void ResetWallrunDelay() {
-    readyToWallrun = true;
-  }
+  //void ResetWallrunDelay() {
+  //  readyToWallrun = true;
+  //}
 
   private void HandleCameraLean() {
     targetCameraLean = wallLeft ?  -cameraLeanAngle
