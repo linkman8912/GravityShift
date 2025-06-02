@@ -88,7 +88,7 @@ MonoBehaviour:
   maxSlopeAngle: 35
   slideForce: 90
   slideCounterMovement: 2
-  jumpCooldown: 0.25
+  jumpCooldown: 0.1
   jumpForce: 200
   slamVelocity: 100
 --- !u!54 &4214832707106016997
