@@ -32,12 +32,26 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
     [Header("State")]
     public WaterState currentState = WaterState.None;
 
+    // ───────── NOW SUPPORT MULTIPLE BOILED EFFECTS ─────────
+    [Header("Boiled Particle Effects")]
+    [Tooltip("List every particle‐system GameObject you want to play when water becomes Boiled.")]
+    public GameObject[] boiledEffects;
+
     private MeshRenderer _rend;
+    private WaterState prevState = WaterState.None;
 
     void Awake()
     {
         _rend = GetComponent<MeshRenderer>();
         ApplyVisual();
+
+        // Ensure every boiledEffect starts disabled
+        foreach (var go in boiledEffects)
+            if (go != null)
+                go.SetActive(false);
+
+        // Record the starting state so we don't accidentally trigger on first ApplyVisual
+        prevState = currentState;
     }
 
     /// <summary>
@@ -66,6 +80,7 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
 
     private void ApplyHeat()
     {
+        // If not yet Heated, set Heated; else if already Heated, set Boiled
         if (!currentState.HasFlag(WaterState.Heated))
             currentState |= WaterState.Heated;
         else if (!currentState.HasFlag(WaterState.Boiled))
@@ -82,7 +97,7 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
 
     private void ApplyVisual()
     {
-        // Pick the correct material array based on the current flags
+        // ───────── PICK MATERIALS ─────────
         if (currentState.HasFlag(WaterState.Boiled) && currentState.HasFlag(WaterState.Electrified))
             _rend.materials = boiledElectrifiedMats;
         else if (currentState.HasFlag(WaterState.Heated) && currentState.HasFlag(WaterState.Electrified))
@@ -95,15 +110,51 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
             _rend.materials = electrifiedMats;
         else
             _rend.materials = normalMats;
+
+        // ───────── SEE IF “Boiled” JUST GOT SET THIS FRAME ─────────
+        bool justBoiled =
+            currentState.HasFlag(WaterState.Boiled) &&
+            !prevState.HasFlag(WaterState.Boiled);
+
+        if (justBoiled)
+        {
+            // Activate + restart every boiled particle effect
+            foreach (var go in boiledEffects)
+            {
+                if (go == null)
+                    continue;
+
+                go.SetActive(true);
+
+                var riser = go.GetComponent<ParticleRateRiser>();
+                if (riser != null)
+                {
+                    riser.RestartRamp();
+                }
+                else
+                {
+                    Debug.LogWarning($"[WaterBehaviour] No ParticleRateRiser on “{go.name}”.");
+                }
+            }
+        }
+
+        // Update prevState for the next time we call ApplyVisual()
+        prevState = currentState;
     }
 
     /// <summary>
     /// Call to reset this water back to its initial (None) state.
+    /// Disables all boiled particle effects immediately.
     /// </summary>
     public void ResetState()
     {
         currentState = WaterState.None;
         ApplyVisual();
+
+        foreach (var go in boiledEffects)
+            if (go != null)
+                go.SetActive(false);
+
         Debug.Log($"🔄 {name} reset to normal.");
     }
 }
