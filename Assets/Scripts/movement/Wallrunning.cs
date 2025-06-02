@@ -36,6 +36,7 @@ public class Wallrunning : MonoBehaviour
     public Transform camera;
     private PlayerMovement pm;
     private Rigidbody rb;
+    private Footsteps footsteps;
     [Header("Visual")]
     [SerializeField] private float cameraLeanAngle = 15f;
     [SerializeField] private float cameraLeanSpeed = 5f;
@@ -46,6 +47,7 @@ public class Wallrunning : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         pm = GetComponent<PlayerMovement>();
         whatIsGround = pm.whatIsGround;
+        footsteps = GetComponent<Footsteps>();
     }
 
     // Update is called once per frame
@@ -87,6 +89,7 @@ public class Wallrunning : MonoBehaviour
                 StartWallrun();
             }
             WallrunningMovement();
+            footsteps.PlayFootstep();
             if (wallrunTimer < maxWallrunTime)
             {
                 wallrunTimer += Time.deltaTime;
@@ -151,6 +154,7 @@ public class Wallrunning : MonoBehaviour
         mostRecentWalljump = currentTarget;
         readyToWallrun = false;
         Invoke("ResetWallrunDelay", wallrunDelay);
+        footsteps.PlayFootstep();
     }
 
     void ResetWallrunDelay()
