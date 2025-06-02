@@ -1098,9 +1098,11 @@ MonoBehaviour:
   heatedElectrifiedMats: []
   boiledElectrifiedMats: []
   currentState: 0
-  boiledEffects:
+  heatedEffects:
   - {fileID: 966147146}
+  boiledEffects:
   - {fileID: 1904317566}
+  electrifiedEffects: []
 --- !u!4 &427507848 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 9209133757315216858, guid: a5ba9648e99243b4a890016f37e1a8fd,

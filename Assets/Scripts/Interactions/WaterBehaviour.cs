@@ -32,10 +32,20 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
     [Header("State")]
     public WaterState currentState = WaterState.None;
 
-    // ───────── NOW SUPPORT MULTIPLE BOILED EFFECTS ─────────
+    // ───────── PARTICLE EFFECT REFERENCES ─────────
+
+    [Header("Heated Particle Effects")]
+    [Tooltip("Drag in every GameObject (with ParticleSystem + ParticleRateRiser) you want to play when water first becomes Heated.")]
+    public GameObject[] heatedEffects;
+
     [Header("Boiled Particle Effects")]
-    [Tooltip("List every particle‐system GameObject you want to play when water becomes Boiled.")]
+    [Tooltip("Drag in every GameObject (with ParticleSystem + ParticleRateRiser) you want to play when water first becomes Boiled.")]
     public GameObject[] boiledEffects;
+
+    [Header("Electrified Particle Effects")]
+    [Tooltip("Drag in every GameObject (with ParticleSystem + ParticleRateRiser) you want to play when water first becomes Electrified.")]
+    public GameObject[] electrifiedEffects;
+
 
     private MeshRenderer _rend;
     private WaterState prevState = WaterState.None;
@@ -45,19 +55,15 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
         _rend = GetComponent<MeshRenderer>();
         ApplyVisual();
 
-        // Ensure every boiledEffect starts disabled
-        foreach (var go in boiledEffects)
-            if (go != null)
-                go.SetActive(false);
+        // Ensure every effect is off at start
+        SetAllInactive(heatedEffects);
+        SetAllInactive(boiledEffects);
+        SetAllInactive(electrifiedEffects);
 
         // Record the starting state so we don't accidentally trigger on first ApplyVisual
         prevState = currentState;
     }
 
-    /// <summary>
-    /// Called by GrappleInteraction when this water object
-    /// interacts with another IInteractable.
-    /// </summary>
     public void HandleInteraction(IInteractable other)
     {
         switch (other.Category)
@@ -80,11 +86,15 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
 
     private void ApplyHeat()
     {
-        // If not yet Heated, set Heated; else if already Heated, set Boiled
+        // If not yet Heated, set Heated; else if already Heated but not Boiled, set Boiled
         if (!currentState.HasFlag(WaterState.Heated))
+        {
             currentState |= WaterState.Heated;
+        }
         else if (!currentState.HasFlag(WaterState.Boiled))
+        {
             currentState |= WaterState.Boiled;
+        }
 
         ApplyVisual();
     }
@@ -97,64 +107,123 @@ public class WaterBehaviour : MonoBehaviour, IInteractable
 
     private void ApplyVisual()
     {
-        // ───────── PICK MATERIALS ─────────
+        // ───────── PICK MATERIALS BASED ON FLAGS ─────────
         if (currentState.HasFlag(WaterState.Boiled) && currentState.HasFlag(WaterState.Electrified))
+        {
             _rend.materials = boiledElectrifiedMats;
+        }
         else if (currentState.HasFlag(WaterState.Heated) && currentState.HasFlag(WaterState.Electrified))
+        {
             _rend.materials = heatedElectrifiedMats;
+        }
         else if (currentState.HasFlag(WaterState.Boiled))
+        {
             _rend.materials = boiledMats;
+        }
         else if (currentState.HasFlag(WaterState.Heated))
+        {
             _rend.materials = heatedMats;
+        }
         else if (currentState.HasFlag(WaterState.Electrified))
+        {
             _rend.materials = electrifiedMats;
+        }
         else
+        {
             _rend.materials = normalMats;
+        }
 
-        // ───────── SEE IF “Boiled” JUST GOT SET THIS FRAME ─────────
+        // ───────── DETECT “JUST SET” FLAGS ─────────
+
+        bool justHeated =
+            currentState.HasFlag(WaterState.Heated) &&
+            !prevState.HasFlag(WaterState.Heated);
+
         bool justBoiled =
             currentState.HasFlag(WaterState.Boiled) &&
             !prevState.HasFlag(WaterState.Boiled);
 
-        if (justBoiled)
+        bool justElectrified =
+            currentState.HasFlag(WaterState.Electrified) &&
+            !prevState.HasFlag(WaterState.Electrified);
+
+        // ───────── TRIGGER HEATED EFFECTS ─────────
+        if (justHeated)
         {
-            // Activate + restart every boiled particle effect
-            foreach (var go in boiledEffects)
-            {
-                if (go == null)
-                    continue;
-
-                go.SetActive(true);
-
-                var riser = go.GetComponent<ParticleRateRiser>();
-                if (riser != null)
-                {
-                    riser.RestartRamp();
-                }
-                else
-                {
-                    Debug.LogWarning($"[WaterBehaviour] No ParticleRateRiser on “{go.name}”.");
-                }
-            }
+            ActivateAndRampAll(heatedEffects);
         }
 
-        // Update prevState for the next time we call ApplyVisual()
+        // ───────── TRIGGER BOILED EFFECTS ─────────
+        if (justBoiled)
+        {
+            ActivateAndRampAll(boiledEffects);
+        }
+
+        // ───────── TRIGGER ELECTRIFIED EFFECTS ─────────
+        if (justElectrified)
+        {
+            ActivateAndRampAll(electrifiedEffects);
+        }
+
+        // ───────── UPDATE PREVIOUS STATE ─────────
         prevState = currentState;
     }
 
+
     /// <summary>
-    /// Call to reset this water back to its initial (None) state.
-    /// Disables all boiled particle effects immediately.
+    /// Resets water to None, disables all particle effects immediately.
     /// </summary>
     public void ResetState()
     {
         currentState = WaterState.None;
         ApplyVisual();
 
-        foreach (var go in boiledEffects)
-            if (go != null)
-                go.SetActive(false);
+        SetAllInactive(heatedEffects);
+        SetAllInactive(boiledEffects);
+        SetAllInactive(electrifiedEffects);
 
         Debug.Log($"🔄 {name} reset to normal.");
+    }
+
+
+    // ──── HELPERS ────
+
+    /// <summary>
+    /// Disable every GameObject in the array (if not null).
+    /// </summary>
+    private void SetAllInactive(GameObject[] effects)
+    {
+        if (effects == null) return;
+        foreach (var go in effects)
+        {
+            if (go != null)
+                go.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// For each GameObject in the array: SetActive(true) and
+    /// call its ParticleRateRiser.RestartRamp() if present.
+    /// </summary>
+    private void ActivateAndRampAll(GameObject[] effects)
+    {
+        if (effects == null) return;
+        foreach (var go in effects)
+        {
+            if (go == null)
+                continue;
+
+            go.SetActive(true);
+
+            var riser = go.GetComponent<ParticleRateRiser>();
+            if (riser != null)
+            {
+                riser.RestartRamp();
+            }
+            else
+            {
+                Debug.LogWarning($"[WaterBehaviour] No ParticleRateRiser on “{go.name}”.");
+            }
+        }
     }
 }

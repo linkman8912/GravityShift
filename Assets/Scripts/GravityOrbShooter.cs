@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class GravityOrbShooter : MonoBehaviour
 {
@@ -55,16 +55,17 @@ public class GravityOrbShooter : MonoBehaviour
     {
         if (activeOrb != null)
         {
-            // If orb is held, listen for left click to fire it.
+            // Left click = pull‐mode shot → consume one frame of grapple
             if (Input.GetKeyDown(pullKey))
             {
                 FireOrb(true);
-                leftClickConsumed = true;
+                GravityOrbShooter.leftClickConsumed = true;
             }
+            // Right click = push‐mode shot → do not block grapple
             else if (Input.GetKeyDown(pushKey))
             {
                 FireOrb(false);
-                leftClickConsumed = true;
+                // ← NOTE: do NOT set leftClickConsumed here
             }
         }
         else
@@ -75,6 +76,7 @@ public class GravityOrbShooter : MonoBehaviour
             }
         }
     }
+
 
     /// <summary>
     /// Instantiates the orb at the hold position and marks it as held.

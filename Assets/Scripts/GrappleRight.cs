@@ -44,11 +44,15 @@ public class GrappleRight : MonoBehaviour
 
     void HandleGrappleInput()
     {
-        if ((_orbShooter != null && _orbShooter.IsOrbHeld) || GravityOrbShooter.leftClickConsumed)
+        if (GravityOrbShooter.leftClickConsumed)
+        {
+            GravityOrbShooter.leftClickConsumed = false;
             return;
+        }
 
         if (!Input.GetMouseButtonDown(1))
             return;
+
 
         int detectionMask = grappleLayer.value | anchorLayer.value;
         if (!Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out RaycastHit hit, maxGrappleDistance, detectionMask))
