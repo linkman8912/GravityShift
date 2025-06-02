@@ -53,10 +53,13 @@ public class PlayerMovement : MonoBehaviour
   private Vector3 normalVector = Vector3.up;
   private Vector3 wallNormalVector;
 
+  private Footsteps footsteps;
+
   void Awake() {
     rb = GetComponent<Rigidbody>();
     rb.freezeRotation = true;  
     rb.interpolation = RigidbodyInterpolation.Interpolate;
+    footsteps = GetComponent<Footsteps>();
   }
 
   void Start() {
@@ -156,6 +159,9 @@ public class PlayerMovement : MonoBehaviour
       multiplier = 0.5f;
       multiplierV = 0.5f;
     }*/
+
+    if (grounded && FindVelRelativeToLook() != new Vector2(0, 0)) 
+      footsteps.PlayFootstep();
 
     // Movement while sliding
     if (grounded && crouching) multiplierV = 0f;
