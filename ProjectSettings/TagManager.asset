@@ -13,9 +13,9 @@ TagManager:
   - UI
   - GrappleWall
   - electric
-  - 
+  - Camera
   - Heat
-  - 
+  - Enemy
   - Anchor
   - Player
   - Orb

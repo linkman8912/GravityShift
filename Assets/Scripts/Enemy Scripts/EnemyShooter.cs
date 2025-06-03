@@ -19,7 +19,7 @@ public class EnemyShooter : MonoBehaviour
 
     [Header("Ragdoll Settings")]
     public float tiltThreshold = 30f;
-    public float ragdollDuration = 3f;
+    public float ragdollDuration = 10f;
     public LayerMask groundLayer;
 
     [Header("Advanced Ragdoll Control")]
@@ -27,7 +27,7 @@ public class EnemyShooter : MonoBehaviour
     public LayerMask disableRecoveryLayer;
 
     [Header("Recovery Delay Settings")]
-    [Tooltip("How long after hitting the ground before the ragdoll-duration timer even begins.")]
+    [Tooltip("How long after hitting the ground before the ragdoll‐duration timer even begins.")]
     public float recoveryDelayDuration = 3f;
 
     // internals
@@ -41,6 +41,7 @@ public class EnemyShooter : MonoBehaviour
     private HashSet<Collider> collisionStayObjects = new HashSet<Collider>();
     private int recoveryBlockContacts = 0;
 
+    // <-- This flag comes from your grappling code:
     public bool IsGrappled { get; set; } = false;
 
     void Awake()
@@ -55,13 +56,22 @@ public class EnemyShooter : MonoBehaviour
                   $"DelayT={recoveryDelayTimer:F2}, RagdollT={ragdollTimer:F2}, " +
                   $"Grounded={isGrounded}, Blocked={IsBlockedFromRecovery()}, Grappled={IsGrappled}");
 
+        // ——— If we just got grappled (and are not already ragdolled), force ragdoll now ———
+        if (!isRagdoll && IsGrappled)
+        {
+            EnterRagdoll();
+            return;
+        }
+
         if (isRagdoll)
         {
             // ————— PHASE 1: INITIAL DELAY BEFORE RAGDOLL DURATION —————
             if (isRecoveryDelayActive)
             {
-                // if still touching a disable-recovery object, reset the delay
-                if (IsBlockedFromRecovery())
+                // === CHANGE STARTS HERE ===
+                // As long as "IsGrappled" is true, keep resetting the delay timer.
+                // Likewise, if touching a disable-recovery layer, also reset.
+                if (IsBlockedFromRecovery() || IsGrappled)
                 {
                     recoveryDelayTimer = recoveryDelayDuration;
                 }
@@ -69,6 +79,7 @@ public class EnemyShooter : MonoBehaviour
                 {
                     recoveryDelayTimer -= Time.deltaTime;
                 }
+                // === CHANGE ENDS HERE ===
 
                 if (recoveryDelayTimer <= 0f)
                 {
@@ -155,7 +166,6 @@ public class EnemyShooter : MonoBehaviour
         isRagdoll = true;
         isRecoveryDelayActive = true;
         recoveryDelayTimer = recoveryDelayDuration;
-        // set up for both phases:
         ragdollTimer = ragdollDuration;
 
         rb.useGravity = true;
@@ -169,7 +179,6 @@ public class EnemyShooter : MonoBehaviour
         rb.constraints = RigidbodyConstraints.None;
         Debug.Log("[Recovery] Rotation locks released — can ragdoll again.");
     }
-
 
     void RecoverFromRagdoll()
     {
@@ -204,13 +213,11 @@ public class EnemyShooter : MonoBehaviour
         rb.constraints = RigidbodyConstraints.FreezeRotationX
                        | RigidbodyConstraints.FreezeRotationZ;
 
-        // **after 1 second**, remove those locks so tilt can happen again
-        StartCoroutine(ReleaseRotationLockAfterDelay(1f));
+        // **after 2 seconds**, remove those locks so tilt can happen again
+        StartCoroutine(ReleaseRotationLockAfterDelay(3f));
 
-        Debug.Log("[SmoothRecovery] Upright and locked for 1s, then will re-enable ragdoll.");
+        Debug.Log("[SmoothRecovery] Upright and locked for 3s, then will re-enable ragdoll.");
     }
-
-
 
     void RotateBodyTowardsPlayer()
     {
@@ -248,8 +255,18 @@ public class EnemyShooter : MonoBehaviour
     void Shoot()
     {
         if (projectilePrefab == null) return;
+
+        // 1) Instantiate using the firePoint’s rotation so forward is correct:
         GameObject p = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
+
+        // 2) Immediately apply whatever visual‐only rotation you need.
+        //    Here we rotate 90° around the LOCAL forward axis (so it still flies the same way).
+        p.transform.Rotate(90f, 0f, 0f, Space.Self);
+
+        // 3) Give it velocity along firePoint.forward as before:
         if (p.TryGetComponent<Rigidbody>(out var prb))
             prb.velocity = firePoint.forward * projectileSpeed;
     }
+
+
 }
