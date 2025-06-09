@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿// GrappleRight.cs
+using UnityEngine;
 using System.Collections.Generic;
 
 public class GrappleRight : MonoBehaviour
@@ -25,18 +26,29 @@ public class GrappleRight : MonoBehaviour
     private RaycastHit firstHit;
     private bool isFirstTargetSelected = false;
     private GravityOrbShooter _orbShooter;
+    private bool prevOrbHeld = false;
+    private float orbReleaseTime = -Mathf.Infinity;
+    private const float grappleBuffer = 0.1f;
 
     void Start()
     {
         _orbShooter = FindObjectOfType<GravityOrbShooter>();
         if (playerCamera == null)
             playerCamera = Camera.main;
-        if (playerCamera == null)
-            Debug.LogError("GrappleRight: No Camera assigned or found.");
+        // removed error log
     }
 
     void Update()
     {
+        if (_orbShooter != null)
+        {
+            bool currentlyHeld = _orbShooter.IsOrbHeld;
+            if (prevOrbHeld && !currentlyHeld)
+            {
+                orbReleaseTime = Time.time;
+            }
+            prevOrbHeld = currentlyHeld;
+        }
         HandleGrappleInput();
         HandleGrappleRelease();
         UpdateLineRenderers();
@@ -44,58 +56,71 @@ public class GrappleRight : MonoBehaviour
 
     void HandleGrappleInput()
     {
+        // 1) If we “consumed” a left-click for orb shooting, skip this frame
         if (GravityOrbShooter.leftClickConsumed)
         {
             GravityOrbShooter.leftClickConsumed = false;
             return;
         }
 
+        if (_orbShooter != null && _orbShooter.IsOrbHeld)
+        {
+            return;
+        }
+
+        // 2.1) Enforce post-shot buffer
+        if (Time.time - orbReleaseTime < grappleBuffer)
+        {
+            return;
+        }
+
+        // 3) Only proceed on right-mouse down
         if (!Input.GetMouseButtonDown(1))
             return;
 
-
+        // 4) Raycast for valid grapple targets
         int detectionMask = grappleLayer.value | anchorLayer.value;
-        if (!Physics.Raycast(playerCamera.transform.position, playerCamera.transform.forward, out RaycastHit hit, maxGrappleDistance, detectionMask))
+        if (!Physics.Raycast(playerCamera.transform.position,
+                             playerCamera.transform.forward,
+                             out RaycastHit hit,
+                             maxGrappleDistance,
+                             detectionMask))
         {
             if (enableDebug)
             {
-                Debug.DrawRay(playerCamera.transform.position, playerCamera.transform.forward * maxGrappleDistance, invalidTargetColor, 0.1f);
+                Debug.DrawRay(playerCamera.transform.position,
+                              playerCamera.transform.forward * maxGrappleDistance,
+                              invalidTargetColor,
+                              0.1f);
                 if (isFirstTargetSelected)
-                    Debug.Log("Clearing first target — no valid second target");
-                else
-                    Debug.Log("No valid grapple target detected");
+                    ; // cleared first target
                 isFirstTargetSelected = false;
             }
             return;
         }
 
+        // 5) Require a Rigidbody on the hit
         if (hit.rigidbody == null)
         {
-            if (enableDebug)
-                Debug.LogWarning($"{hit.collider.name}: No Rigidbody");
             return;
         }
 
+        // 6) Check dynamic vs. anchor layers
         bool isDynamic = !hit.rigidbody.isKinematic;
         bool isAnchor = (anchorLayer.value & (1 << hit.collider.gameObject.layer)) != 0;
         if (!isDynamic && !isAnchor)
         {
-            if (enableDebug)
-                Debug.LogWarning($"{hit.collider.name}: Kinematic and not in Anchor layer");
             return;
         }
 
+        // 7) First click selects host, second click creates the connection
         if (!isFirstTargetSelected)
         {
             firstHit = hit;
             isFirstTargetSelected = true;
-            if (enableDebug)
-                Debug.Log($"FIRST TARGET SET: {hit.collider.name} at {hit.point}");
         }
         else
         {
-            if (enableDebug)
-                Debug.Log($"CREATING CONNECTION BETWEEN: {firstHit.collider.name} and {hit.collider.name}");
             CreateGrappleConnection(firstHit, hit);
             isFirstTargetSelected = false;
         }
@@ -108,8 +133,6 @@ public class GrappleRight : MonoBehaviour
 
         if (aIsAnchor && bIsAnchor)
         {
-            if (enableDebug)
-                Debug.Log($"Visual-only connection between anchors: {hitA.collider.name} ↔ {hitB.collider.name}");
             CreateVisualConnection(hitA, hitB);
             return;
         }
@@ -151,7 +174,6 @@ public class GrappleRight : MonoBehaviour
 
         activeGrapples.Add(new GrapplePair(hostRb, anchorRb, spring, lr));
 
-        // Notify enemies they're grappled
         var hostEnemy = hostRb.GetComponent<EnemyShooter>();
         var anchorEnemy = anchorRb != null ? anchorRb.GetComponent<EnemyShooter>() : null;
         if (hostEnemy != null) hostEnemy.IsGrappled = true;
@@ -159,10 +181,9 @@ public class GrappleRight : MonoBehaviour
 
         if (enableDebug)
         {
-            string hDesc = hostHit.collider.name + (hostRb.isKinematic ? " (AnchorLayer)" : "");
-            string aDesc = anchorHit.collider.name + (anchorRb.isKinematic ? " (AnchorLayer)" : "");
-            Debug.Log($"New Grapple! {hDesc} ↔ {aDesc}\n" +
-                      $"Anchors → Host: {spring.anchor}, Connected: {spring.connectedAnchor}");
+            Debug.DrawLine(hostRb.transform.TransformPoint(spring.anchor),
+                           spring.connectedBody.transform.TransformPoint(spring.connectedAnchor),
+                           Color.cyan);
         }
     }
 
@@ -187,9 +208,6 @@ public class GrappleRight : MonoBehaviour
     {
         if (!Input.GetKeyDown(releaseKey))
             return;
-
-        if (enableDebug)
-            Debug.Log($"Releasing all ({activeGrapples.Count}) grapples");
 
         foreach (var pair in activeGrapples)
         {
@@ -226,6 +244,7 @@ public class GrappleRight : MonoBehaviour
 
             pair.lineRenderer.SetPosition(0, pA);
             pair.lineRenderer.SetPosition(1, pB);
+
             if (enableDebug)
                 Debug.DrawLine(pA, pB, Color.cyan);
         }

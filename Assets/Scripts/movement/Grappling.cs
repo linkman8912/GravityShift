@@ -1,90 +1,138 @@
-using System.Collections;
+Ôªø// Grappling.cs
 using UnityEngine;
+using System.Collections;
 
-public class Grappling : MonoBehaviour {
-  private LineRenderer lr;
-  private Vector3 grapplePoint;
-  public LayerMask whatIsGrappleable;
-  public KeyCode grappleKey = KeyCode.Mouse1;
-  public KeyCode pullKey = KeyCode.Tab;
-  public float pullSpeed = 50f;
-  public Transform gunTip, camera, player;
-  public float maxDistance = 100000f;
-  private SpringJoint joint;
-  private GravityOrbShooter orb;
+public class Grappling : MonoBehaviour
+{
+    // ‚Äî‚Äî‚Äî Existing fields ‚Äî‚Äî‚Äî
+    private LineRenderer lr;
+    private Vector3 grapplePoint;
+    public LayerMask whatIsGrappleable;
+    public KeyCode grappleKey = KeyCode.Mouse0;    // ‚Üê left-click
+    public KeyCode pullKey = KeyCode.Tab;
+    public float pullSpeed = 50f;
+    public Transform gunTip, camera, player;
+    public float maxDistance = 100000f;
+    private SpringJoint joint;
 
-  void Start() {
-    lr = GetComponent<LineRenderer>();
-    orb = GetComponent<GravityOrbShooter>();
-  }
-  void Update() {
-    if(Input.GetKeyDown(grappleKey) /*&& !orb.IsOrbHeld*/) {
-      StartGrapple();
-    }
-    else if(Input.GetKeyUp(grappleKey)) {
-      StopGrapple();
-    } 
-    if (isGrappling() && Input.GetKey(pullKey)) {
-      joint.maxDistance -= pullSpeed * Time.deltaTime;
-      joint.minDistance -= pullSpeed * Time.deltaTime;
-    }
-  }
+    // ‚Äî‚Äî‚Äî Orb shooter reference ‚Äî‚Äî‚Äî
+    [Tooltip("Drag your GravityOrbShooter here, or it'll auto-find at Start")]
+    public GravityOrbShooter orb;
 
-  void LateUpdate() {
-    DrawRope();
-  }
+    // ‚Äî‚Äî‚Äî Buffer logic fields ‚Äî‚Äî‚Äî
+    private bool prevOrbHeld = false;
+    private float orbReleaseTime = -Mathf.Infinity;
+    private const float grappleBuffer = 0.1f;  // seconds after release
 
-  void StartGrapple()
-  {
-    RaycastHit hit;
-    // 1) pass your LayerMask into the Raycast call:
-    if (Physics.Raycast(
-          origin: camera.position,
-          direction: camera.forward,
-          out hit,
-          maxDistance,
-          whatIsGrappleable  // <-- mask excludes your Player layer!
-          ))
+    void Start()
     {
-      // 2) sanity-check that you didn't still hit your own player transform:
-      if (hit.collider.transform.root == player.transform)
-      {
-        Debug.Log("Grapple hit player ñ ignoring.");
-        return;
-      }
+        lr = GetComponent<LineRenderer>();
 
-      // ñññññ existing grapple hookup code ñññññ
-      grapplePoint = hit.point;
-      joint = player.gameObject.AddComponent<SpringJoint>();
-      joint.autoConfigureConnectedAnchor = false;
-      joint.connectedAnchor = grapplePoint;
-      float distanceFromPoint = Vector3.Distance(player.position, grapplePoint);
-      joint.maxDistance = distanceFromPoint * 0.8f;
-      joint.minDistance = distanceFromPoint * 0.25f;
-      joint.spring = 4.5f;
-      joint.damper = 7f;
-      joint.massScale = 4.5f;
-      lr.positionCount = 2;
+        // Make sure orb reference is set
+        if (orb == null)
+        {
+            orb = FindObjectOfType<GravityOrbShooter>();
+        }
     }
-  }
 
+    void Update()
+    {
+        // 1) Track orb hold‚Üírelease
+        if (orb != null)
+        {
+            bool currentlyHeld = orb.IsOrbHeld;
+            if (prevOrbHeld && !currentlyHeld)
+            {
+                orbReleaseTime = Time.time;
+            }
+            prevOrbHeld = currentlyHeld;
+        }
 
-  void StopGrapple() {
-    lr.positionCount = 0;
-    Destroy(joint);
-  }
+        // 2) Grapple on left-click
+        if (Input.GetKeyDown(grappleKey))
+        {
+            // 2a) blocked while orb held
+            if (orb != null && orb.IsOrbHeld)
+            {
+                // blocked
+            }
+            // 2b) blocked during buffer
+            else if (Time.time - orbReleaseTime < grappleBuffer)
+            {
+                // blocked
+            }
+            // 2c) ok to grapple
+            else
+            {
+                StartGrapple();
+            }
+        }
+        else if (Input.GetKeyUp(grappleKey))
+        {
+            StopGrapple();
+        }
 
-  void DrawRope() {
-    // don't draw if not grappling
-    if (!joint) return;
-    lr.SetPosition(0, gunTip.position);
-    lr.SetPosition(1, grapplePoint);
+        // 3) Pull logic
+        if (isGrappling() && Input.GetKey(pullKey))
+        {
+            joint.maxDistance -= pullSpeed * Time.deltaTime;
+            joint.minDistance -= pullSpeed * Time.deltaTime;
+        }
+    }
 
-  }
-  public bool isGrappling() {
-    return joint != null;
-  }
-  public Vector3 getGrapplePoint() {
-    return grapplePoint;
-  }
+    void LateUpdate()
+    {
+        DrawRope();
+    }
+
+    void StartGrapple()
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(camera.position, camera.forward, out hit, maxDistance, whatIsGrappleable))
+        {
+            if (hit.collider.transform.root == player.transform)
+            {
+                return;
+            }
+
+            grapplePoint = hit.point;
+            joint = player.gameObject.AddComponent<SpringJoint>();
+            joint.autoConfigureConnectedAnchor = false;
+            joint.connectedAnchor = grapplePoint;
+            float dist = Vector3.Distance(player.position, grapplePoint);
+            joint.maxDistance = dist * 0.8f;
+            joint.minDistance = dist * 0.25f;
+            joint.spring = 4.5f;
+            joint.damper = 7f;
+            joint.massScale = 4.5f;
+            lr.positionCount = 2;
+        }
+        else
+        {
+            // no hit
+        }
+    }
+
+    void StopGrapple()
+    {
+        lr.positionCount = 0;
+        Destroy(joint);
+    }
+
+    void DrawRope()
+    {
+        if (!joint) return;
+        lr.SetPosition(0, gunTip.position);
+        lr.SetPosition(1, grapplePoint);
+    }
+
+    public bool isGrappling()
+    {
+        return joint != null;
+    }
+
+    public Vector3 getGrapplePoint()
+    {
+        return grapplePoint;
+    }
 }

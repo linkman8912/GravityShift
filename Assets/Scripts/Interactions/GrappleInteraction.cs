@@ -2,10 +2,6 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-/// <summary>
-/// Handles two‐click interactions between IInteractable objects,
-/// now including a Default layer to short‐circuit no‐ops.
-/// </summary>
 public class GrappleInteraction : MonoBehaviour
 {
     [Header("Interaction Settings")]
@@ -28,12 +24,21 @@ public class GrappleInteraction : MonoBehaviour
     [Tooltip("The Camera used for raycasting. If left empty, will try Camera.main.")]
     public Camera playerCamera;
 
+    [Header("Orb Reference")]
+    [Tooltip("Drag your GravityOrbShooter here, or it'll auto-find at Start")]
+    public GravityOrbShooter orb;
+
     // internal two-click state
     private RaycastHit firstHit;
     private bool isFirstSelected = false;
 
     // track every WaterBehaviour we modified
     private List<WaterBehaviour> _modifiedWaters = new List<WaterBehaviour>();
+
+    // ——— Buffer logic fields ———
+    private bool prevOrbHeld = false;
+    private float orbReleaseTime = -Mathf.Infinity;
+    private const float grappleBuffer = 0.1f;  // seconds after release
 
     void Start()
     {
@@ -42,6 +47,11 @@ public class GrappleInteraction : MonoBehaviour
         if (playerCamera == null)
             Debug.LogError("GrappleInteraction: No Camera assigned or found.");
 
+        // auto-find orb shooter if not assigned
+        if (orb == null)
+            orb = FindObjectOfType<GravityOrbShooter>();
+        Debug.Log($"[Interact] Orb reference {(orb != null ? "FOUND" : "MISSING")}");
+
         // sanity check: make sure you didn't accidentally include Default in your waterLayer
         Debug.Assert((waterLayer.value & (1 << 0)) == 0,
             "Water layer mask includes Default layer — uncheck it in the Inspector!");
@@ -49,17 +59,25 @@ public class GrappleInteraction : MonoBehaviour
 
     void Update()
     {
-        // ——————————————
+        // 0) Track orb hold→release transition
+        if (orb != null)
+        {
+            bool currentlyHeld = orb.IsOrbHeld;
+            if (prevOrbHeld && !currentlyHeld)
+            {
+                orbReleaseTime = Time.time;
+                Debug.Log($"[Interact] Orb released — buffer until {orbReleaseTime + grappleBuffer:F2}");
+            }
+            prevOrbHeld = currentlyHeld;
+        }
+
         // 1) RESET ON “R”
-        // ——————————————
         if (Input.GetKeyDown(KeyCode.R))
         {
-            // reset all water
             foreach (var wb in _modifiedWaters)
                 wb.ResetState();
             _modifiedWaters.Clear();
 
-            // destroy every SpringJoint and its matching GrappleLine renderer
             foreach (var sj in FindObjectsOfType<SpringJoint>())
                 Destroy(sj);
             foreach (var lr in FindObjectsOfType<LineRenderer>())
@@ -71,19 +89,39 @@ public class GrappleInteraction : MonoBehaviour
             return;
         }
 
-        // ——————————————
-        // 2) INTERACT ON RIGHT-CLICK
-        // ——————————————
-        if (!Input.GetMouseButtonDown(1))
-            return;
+        // 2) INTERACT ON RIGHT-CLICK WITH ORB GUARDS
+        if (Input.GetMouseButtonDown(1))
+        {
+            // log entry state
+            float sinceRelease = Time.time - orbReleaseTime;
+            Debug.Log($"[Interact] Right-click ▶ orbHeld={(orb != null && orb.IsOrbHeld)} | sinceRelease={sinceRelease:F2}s");
 
-        // build our raycast mask (now including defaultLayer)
+            // a) block while orb is held
+            if (orb != null && orb.IsOrbHeld)
+            {
+                Debug.Log("[Interact] ⛔ Blocked: Orb is held — skipping interaction");
+                return;
+            }
+            // b) block during buffer
+            if (sinceRelease < grappleBuffer)
+            {
+                float remaining = grappleBuffer - sinceRelease;
+                Debug.Log($"[Interact] ⛔ Blocked: Buffer active, {remaining:F2}s remaining");
+                return;
+            }
+            // else: fall through to actual interaction
+        }
+        else
+        {
+            return;
+        }
+
+        // 3) build our raycast mask (now including defaultLayer)
         int mask = electricLayer.value
                  | heatLayer.value
                  | waterLayer.value
                  | defaultLayer.value;
 
-        // shoot the ray
         if (!Physics.Raycast(
                 playerCamera.transform.position,
                 playerCamera.transform.forward,
@@ -126,7 +164,7 @@ public class GrappleInteraction : MonoBehaviour
 
         Debug.Log($"[Interact] Pair → {firstGO.name} ({ib.Category})  ↔  {go.name} ({ia.Category})");
 
-        // short‐circuit if either side is Default
+        // short-circuit if either side is Default
         if (ib.Category == InteractionCategory.Default || ia.Category == InteractionCategory.Default)
         {
             Debug.Log("[Interact] Includes Default → no effect.");

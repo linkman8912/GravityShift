@@ -5,7 +5,10 @@ public enum InteractionCategory
     Water,
     Heat,
     Electric,
-    Default   // ← new “no-op” category
+    Default,
+    Metal,
+    Wooden,
+    Explodable
 }
 
 public interface IInteractable
