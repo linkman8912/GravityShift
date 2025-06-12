@@ -123,7 +123,7 @@ public class PlayerMovement : MonoBehaviour
     //Find actual velocity relative to where player is looking
     Vector2 mag = FindVelRelativeToLook();
     float xMag = mag.x, yMag = mag.y;
-
+    rb.useGravity = false;
     //Counteract sliding and sloppy movement
     //CounterMovement(x, y, mag);
     if (!wallrunning) {
