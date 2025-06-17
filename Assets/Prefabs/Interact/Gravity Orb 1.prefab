@@ -50,11 +50,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lifeTime: 20
   effectRadius: 15
-  pullForce: 300
-  pushForce: 500
+  pullForce: 50
+  pushForce: 25
   isPull: 0
   pullDuration: 5
-  pushDuration: 2
   isHeld: 0
   ignoreActivationLayers:
     serializedVersion: 2
@@ -62,6 +61,7 @@ MonoBehaviour:
   groundLayers:
     serializedVersion: 2
     m_Bits: 2779
+  ownerShooter: {fileID: 0}
 --- !u!33 &8194196818396966950
 MeshFilter:
   m_ObjectHideFlags: 0

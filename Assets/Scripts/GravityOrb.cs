@@ -16,15 +16,15 @@ public class GravityOrb : MonoBehaviour
     [Tooltip("Force applied to nearby objects when pushing them away from the orb.")]
     public float pushForce = 50f;
 
+    [Tooltip("Upwards modifier applied with the explosion force for a more dynamic effect.")]
+    public float upwardsModifier = 0f;
+
     [Tooltip("If true, the orb pulls objects in; if false, it pushes objects away.")]
     public bool isPull = false;
 
     [Header("Effect Durations")]
     [Tooltip("Duration (in seconds) for which the orb applies pull force after collision.")]
     public float pullDuration = 2f;
-
-    [Tooltip("Duration (in seconds) for which the orb applies push force after collision.")]
-    public float pushDuration = 2f;
 
     [Tooltip("Indicates whether the orb is still held (i.e., not fired yet).")]
     public bool isHeld = false;
@@ -38,12 +38,11 @@ public class GravityOrb : MonoBehaviour
 
     private Rigidbody _rb;
     private bool _effectTriggered = false;
+    public GravityOrbShooter ownerShooter;
 
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
-
-        // Always ignore physics between Orb and Player layers
         int orbLayer = gameObject.layer;
         int playerLayer = LayerMask.NameToLayer("Player");
         Physics.IgnoreLayerCollision(orbLayer, playerLayer, true);
@@ -59,12 +58,9 @@ public class GravityOrb : MonoBehaviour
         int layer = collision.gameObject.layer;
         bool isIgnored = (ignoreActivationLayers.value & (1 << layer)) != 0;
         bool isGround = (groundLayers.value & (1 << layer)) != 0;
-
-        // Skip activation for ignored layers, unless it's designated as ground
         if (isIgnored && !isGround)
             return;
 
-        // If still held: force push-mode and trigger (but don't detach)
         if (isHeld)
         {
             isPull = false;
@@ -73,7 +69,6 @@ public class GravityOrb : MonoBehaviour
             return;
         }
 
-        // If thrown and not yet triggered: stop motion, make kinematic, then trigger once
         if (!_effectTriggered)
         {
             if (_rb != null)
@@ -86,13 +81,20 @@ public class GravityOrb : MonoBehaviour
     }
 
     /// <summary>
-    /// Begins applying continuous force for the appropriate duration.
+    /// Triggers either a continuous pull or a one-time push impulse.
     /// </summary>
     public void TriggerGravityEffect()
     {
         _effectTriggered = true;
-        float duration = isPull ? pullDuration : pushDuration;
-        StartCoroutine(ApplyContinuousForce(duration));
+        if (isPull)
+        {
+            StartCoroutine(ApplyContinuousForce(pullDuration));
+        }
+        else
+        {
+            ApplyPushImpulse();
+            Destroy(gameObject);
+        }
     }
 
     private IEnumerator ApplyContinuousForce(float duration)
@@ -108,18 +110,30 @@ public class GravityOrb : MonoBehaviour
                 var otherRb = col.attachedRigidbody;
                 if (otherRb != null && otherRb != _rb)
                 {
-                    Vector3 dir = isPull
-                        ? (transform.position - otherRb.position).normalized
-                        : (otherRb.position - transform.position).normalized;
-                    float f = isPull ? pullForce : pushForce;
-                    otherRb.AddForce(dir * f, ForceMode.Force);
+                    Vector3 dir = (transform.position - otherRb.position).normalized;
+                    otherRb.AddForce(dir * pullForce, ForceMode.Force);
                 }
             }
-
             elapsed += Time.fixedDeltaTime;
             yield return wait;
         }
 
         Destroy(gameObject);
+    }
+
+    /// <summary>
+    /// Applies a one-time impulse using Unity's radial explosion force for realistic falloff.
+    /// </summary>
+    private void ApplyPushImpulse()
+    {
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, effectRadius);
+        foreach (var col in hitColliders)
+        {
+            var otherRb = col.attachedRigidbody;
+            if (otherRb != null && otherRb != _rb)
+            {
+                otherRb.AddExplosionForce(pushForce, transform.position, effectRadius, upwardsModifier, ForceMode.Impulse);
+            }
+        }
     }
 }
