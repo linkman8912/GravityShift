@@ -222,6 +222,13 @@ public class GravityOrbShooter : MonoBehaviour
         if (activeOrb == null)
             return;
 
+        var orbScript = activeOrb.GetComponent<GravityOrb>();
+        if (orbScript != null)
+        {
+            orbScript.isPull = isPullMode;
+            orbScript.isHeld = false;
+        }
+
         activeOrb.transform.SetParent(null);
 
         var rb = activeOrb.GetComponent<Rigidbody>() ?? activeOrb.AddComponent<Rigidbody>();
