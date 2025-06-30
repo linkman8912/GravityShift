@@ -7,6 +7,17 @@ public class GravityOrbShooter : MonoBehaviour
     [Tooltip("The orb prefab that must have a GravityOrb component attached.")]
     public GameObject orbPrefab;
 
+    [Header("Player Reference")]
+    [Tooltip("Used to add the player's forward/backward and scaled sideways momentum to the throw and trajectory.")]
+    public Rigidbody playerRigidbody;
+
+    [Tooltip("Fraction of sideways (left/right) player momentum to add to the orb.")]
+    [Range(0f, 1f)]
+    public float lateralMomentumScale = 0.5f;
+
+    [Tooltip("How quickly the preview momentum adapts to changes (higher is snappier).")]
+    public float momentumSmoothSpeed = 5f;
+
     [Tooltip("Transform used as the hold position when the orb is summoned (e.g., near the player's hand).")]
     public Transform holdPosition;
 
@@ -62,23 +73,21 @@ public class GravityOrbShooter : MonoBehaviour
     [Tooltip("The Cinemachine Impulse Source that generates the throw shake.")]
     public CinemachineImpulseSource impulseSource;
 
-    // Optional shared flag if you need to block a second pull-shot in the same frame.
-    public static bool leftClickConsumed = false;
-
-    // Holds a reference to the currently summoned orb.
+    // Private state
     private GameObject activeOrb = null;
-
-    // Internal state for charging
     private bool isCharging = false;
     private bool chargingPullMode = false;
     private float currentChargeTime = 0f;
+    private Vector3 smoothedMomentum = Vector3.zero;
+
+    // Optional shared flag if you need to block a second pull-shot in the same frame.
+    public static bool leftClickConsumed = false;
 
     // Public property to indicate if an orb is currently held.
     [HideInInspector] public bool IsOrbHeld { get { return activeOrb != null; } }
 
     private void Start()
     {
-        // Auto-assign camera if none set
         if (aimTransform == null)
         {
             if (Camera.main != null)
@@ -87,11 +96,9 @@ public class GravityOrbShooter : MonoBehaviour
                 Debug.LogError("GravityOrbShooter: No aimTransform assigned and no main camera found!");
         }
 
-        // Hide line initially
         if (trajectoryLine != null)
             trajectoryLine.enabled = false;
 
-        // Optionally generate a startup impulse
         impulseSource?.GenerateImpulse();
     }
 
@@ -99,63 +106,57 @@ public class GravityOrbShooter : MonoBehaviour
     {
         if (activeOrb != null)
         {
-            // Smoothly move & rotate holder to stay in front of camera
-            if (holdPosition != null && aimTransform != null)
-            {
-                Vector3 targetPos = aimTransform.TransformPoint(holdPositionOffset);
-                Quaternion targetRot = aimTransform.rotation;
-                holdPosition.position = Vector3.Lerp(holdPosition.position, targetPos, Time.deltaTime * holdSmoothSpeed);
-                holdPosition.rotation = Quaternion.Slerp(holdPosition.rotation, targetRot, Time.deltaTime * holdSmoothSpeed);
-            }
-
-            // Start charging on key down
-            if (!isCharging && Input.GetKeyDown(pullKey))
-            {
-                isCharging = true;
-                chargingPullMode = true;
-                currentChargeTime = 0f;
-                leftClickConsumed = false;
-            }
-            else if (!isCharging && Input.GetKeyDown(pushKey))
-            {
-                isCharging = true;
-                chargingPullMode = false;
-                currentChargeTime = 0f;
-            }
-
-            // Continue charging
-            if (isCharging)
-            {
-                currentChargeTime += Time.deltaTime;
-                currentChargeTime = Mathf.Min(currentChargeTime, maxChargeTime);
-
-                // Update trajectory preview
-                ShowTrajectory(currentChargeTime / maxChargeTime);
-            }
-
-            // Release to throw
-            if (isCharging && ((chargingPullMode && Input.GetKeyUp(pullKey)) ||
-                               (!chargingPullMode && Input.GetKeyUp(pushKey))))
-            {
-                float chargePercent = currentChargeTime / maxChargeTime;
-                FireOrb(chargingPullMode, chargePercent);
-                isCharging = false;
-
-                // Hide trajectory after throw
-                if (trajectoryLine != null)
-                    trajectoryLine.enabled = false;
-            }
+            UpdateHoldPosition();
+            HandleCharging();
         }
-        else
+        else if (Input.GetKeyDown(summonKey))
         {
-            if (Input.GetKeyDown(summonKey))
-                SummonOrb();
+            SummonOrb();
         }
     }
 
-    /// <summary>
-    /// Instantiates the orb at the hold position and marks it as held.
-    /// </summary>
+    private void UpdateHoldPosition()
+    {
+        if (holdPosition != null && aimTransform != null)
+        {
+            Vector3 targetPos = aimTransform.TransformPoint(holdPositionOffset);
+            Quaternion targetRot = aimTransform.rotation;
+            holdPosition.position = Vector3.Lerp(holdPosition.position, targetPos, Time.deltaTime * holdSmoothSpeed);
+            holdPosition.rotation = Quaternion.Slerp(holdPosition.rotation, targetRot, Time.deltaTime * holdSmoothSpeed);
+        }
+    }
+
+    private void HandleCharging()
+    {
+        if (!isCharging && Input.GetKeyDown(pullKey))
+        {
+            isCharging = true;
+            chargingPullMode = true;
+            currentChargeTime = 0f;
+            leftClickConsumed = false;
+        }
+        else if (!isCharging && Input.GetKeyDown(pushKey))
+        {
+            isCharging = true;
+            chargingPullMode = false;
+            currentChargeTime = 0f;
+        }
+
+        if (isCharging)
+        {
+            currentChargeTime = Mathf.Min(currentChargeTime + Time.deltaTime, maxChargeTime);
+            ShowTrajectory(currentChargeTime / maxChargeTime);
+        }
+
+        if (isCharging && ((chargingPullMode && Input.GetKeyUp(pullKey)) || (!chargingPullMode && Input.GetKeyUp(pushKey))))
+        {
+            FireOrb(chargingPullMode, currentChargeTime / maxChargeTime);
+            isCharging = false;
+            if (trajectoryLine != null)
+                trajectoryLine.enabled = false;
+        }
+    }
+
     private void SummonOrb()
     {
         if (orbPrefab == null)
@@ -169,7 +170,6 @@ public class GravityOrbShooter : MonoBehaviour
             return;
         }
 
-        // Ensure holder is positioned correctly before spawning
         Vector3 initPos = aimTransform.TransformPoint(holdPositionOffset);
         Quaternion initRot = aimTransform.rotation;
         holdPosition.position = initPos;
@@ -178,21 +178,16 @@ public class GravityOrbShooter : MonoBehaviour
         activeOrb = Instantiate(orbPrefab, holdPosition.position, holdPosition.rotation);
         activeOrb.transform.SetParent(holdPosition);
 
-        Rigidbody rb = activeOrb.GetComponent<Rigidbody>();
-        if (rb != null)
+        if (activeOrb.TryGetComponent<Rigidbody>(out var rb))
             rb.isKinematic = true;
 
-        GravityOrb orbScript = activeOrb.GetComponent<GravityOrb>();
-        if (orbScript != null)
+        if (activeOrb.TryGetComponent<GravityOrb>(out var orbScript))
         {
             orbScript.isHeld = true;
             orbScript.ownerShooter = this;
         }
     }
 
-    /// <summary>
-    /// Draws a trajectory preview based on current charge.
-    /// </summary>
     private void ShowTrajectory(float chargePercent)
     {
         if (trajectoryLine == null || aimTransform == null || holdPosition == null)
@@ -201,12 +196,19 @@ public class GravityOrbShooter : MonoBehaviour
         trajectoryLine.enabled = true;
         trajectoryLine.positionCount = trajectoryResolution;
 
+        // 1) starting point
         Vector3 startPos = holdPosition.position;
+        // 2) direction & speed
         float throwSpeed = Mathf.Lerp(minProjectileSpeed, maxProjectileSpeed, chargePercent);
-        Vector3 forward = aimTransform.forward;
-        Vector3 throwDir = Quaternion.AngleAxis(-arcAngle, aimTransform.right) * forward;
-        Vector3 velocity = throwDir * throwSpeed;
+        Vector3 throwDir = Quaternion.AngleAxis(-arcAngle, aimTransform.right) * aimTransform.forward;
 
+        // 3) smooth momentum update
+        smoothedMomentum = Vector3.Lerp(smoothedMomentum, GetPlayerMomentum(), Time.deltaTime * momentumSmoothSpeed);
+
+        // 4) combined velocity
+        Vector3 velocity = smoothedMomentum + throwDir * throwSpeed;
+
+        // 5) draw parabola
         for (int i = 0; i < trajectoryResolution; i++)
         {
             float t = i * trajectoryTimeStep;
@@ -215,9 +217,6 @@ public class GravityOrbShooter : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Fires the summoned orb by detaching it, enabling physics, and applying an initial arc, spin, and drag.
-    /// </summary>
     private void FireOrb(bool isPullMode, float chargePercent)
     {
         if (activeOrb == null)
@@ -225,46 +224,54 @@ public class GravityOrbShooter : MonoBehaviour
 
         activeOrb.transform.SetParent(null);
 
-        GravityOrb orbScript = activeOrb.GetComponent<GravityOrb>();
-        if (orbScript != null)
-        {
-            orbScript.isPull = isPullMode;
-            orbScript.isHeld = false;
-        }
-
-        Rigidbody rb = activeOrb.GetComponent<Rigidbody>();
-        if (rb == null)
-            rb = activeOrb.AddComponent<Rigidbody>();
-
+        var rb = activeOrb.GetComponent<Rigidbody>() ?? activeOrb.AddComponent<Rigidbody>();
         rb.isKinematic = false;
         rb.useGravity = true;
 
         float throwSpeed = Mathf.Lerp(minProjectileSpeed, maxProjectileSpeed, chargePercent);
-        Vector3 forward = aimTransform.forward;
-        Vector3 throwDir = Quaternion.AngleAxis(-arcAngle, aimTransform.right) * forward;
+        Vector3 throwDir = Quaternion.AngleAxis(-arcAngle, aimTransform.right) * aimTransform.forward;
+        Vector3 throwVelocity = throwDir * throwSpeed;
+
+        // apply instantaneous raw momentum
+        Vector3 rawMomentum = GetPlayerMomentum();
 
         if (useImpulse)
-            rb.AddForce(throwDir * throwSpeed, ForceMode.Impulse);
+            rb.AddForce(rawMomentum + throwVelocity, ForceMode.VelocityChange);
         else
-            rb.velocity = throwDir * throwSpeed;
+            rb.velocity = rawMomentum + throwVelocity;
 
         rb.AddTorque(Random.insideUnitSphere * spinTorque, ForceMode.Impulse);
         rb.drag = orbDrag;
         rb.angularDrag = orbAngularDrag;
 
         impulseSource?.GenerateImpulse();
-
         activeOrb = null;
     }
 
-    /// <summary>
-    /// Called by the orb when it activates while still held to reset charge and trajectory.
-    /// </summary>
     public void OnOrbActivatedWhileHeld()
     {
         isCharging = false;
         currentChargeTime = 0f;
         if (trajectoryLine != null)
             trajectoryLine.enabled = false;
+    }
+
+    /// <summary>
+    /// Returns the player’s forward/backward momentum and a scaled component of sideways momentum.
+    /// </summary>
+    private Vector3 GetPlayerMomentum()
+    {
+        if (playerRigidbody == null || aimTransform == null)
+            return Vector3.zero;
+
+        Vector3 vel = playerRigidbody.velocity;
+        Vector3 forwardAxis = aimTransform.forward.normalized;
+        Vector3 forwardVel = forwardAxis * Vector3.Dot(vel, forwardAxis);
+
+        Vector3 rightAxis = aimTransform.right.normalized;
+        float lateralSpeed = Vector3.Dot(vel, rightAxis);
+        Vector3 lateralVel = rightAxis * lateralSpeed * lateralMomentumScale;
+
+        return forwardVel + lateralVel;
     }
 }
