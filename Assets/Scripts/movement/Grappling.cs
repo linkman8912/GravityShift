@@ -20,6 +20,8 @@ public class Grappling : MonoBehaviour
     public float maxDistance = 100000f;
     private SpringJoint joint;
     private PlayerMovement pm;
+    public Transform gunTipBase;
+
 
     // ——— Orb shooter reference ———
     [Tooltip("Drag your GravityOrbShooter here, or it'll auto-find at Start")]
@@ -140,8 +142,9 @@ public class Grappling : MonoBehaviour
     void DrawRope()
     {
         if (!joint) return;
-        lr.SetPosition(0, gunTip.position);
+        lr.SetPosition(0, gunTipBase.position); 
         lr.SetPosition(1, grapplePoint);
+
     }
 
     public bool isGrappling()

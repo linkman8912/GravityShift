@@ -45,6 +45,10 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float slamVelocity = 100f;
     private bool slamming = false;
 
+    [Header("Ground Slam Effect")]
+    [SerializeField] private ParticleSystem slamLandEffect;
+
+
     //Input
     float x, y;
     bool jumping, doubleJumping, sprinting, crouching;
@@ -325,8 +329,12 @@ public class PlayerMovement : MonoBehaviour
 
     private void StopSlam()
     {
+        if (slamLandEffect != null)
+            Instantiate(slamLandEffect, transform.position, Quaternion.identity);
+
         slamming = false;
     }
+
 
     private void Look()
     {
