@@ -209,8 +209,14 @@ public class PlayerMovement : MonoBehaviour {
       if (slamJumpTimer > 0) {
         // Add jump forces
         float velocity = Mathf.Sqrt(slamStartingHeight * -2 * Physics.gravity.y) / 1.8f - (Time.fixedDeltaTime * Physics.gravity.y / 2);
-        rb.AddForce(Vector2.up * velocity, ForceMode.VelocityChange);
-        rb.AddForce(normalVector * velocity, ForceMode.VelocityChange);
+        if (velocity > jumpForce * 1.5f) {
+          rb.AddForce(Vector2.up * velocity, ForceMode.VelocityChange);
+          rb.AddForce(normalVector * velocity, ForceMode.VelocityChange);
+        }
+        else {
+          rb.AddForce(Vector2.up * jumpForce * 1.5f);
+          rb.AddForce(normalVector * jumpForce * 0.5f);
+        }
       }
       else {
         // Add jump forces
