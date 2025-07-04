@@ -96,7 +96,7 @@ public class PlayerMovement : MonoBehaviour
         y = Input.GetAxisRaw("Vertical");
         jumping = Input.GetButton("Jump");
         doubleJumping = Input.GetButtonDown("Jump");
-        crouching = Input.GetKey(KeyCode.LeftControl);
+        crouching = (Input.GetKey(KeyCode.LeftControl) && grounded);
 
         //Crouching
         if (Input.GetKeyDown(KeyCode.LeftControl) && grounded && !slamming)
