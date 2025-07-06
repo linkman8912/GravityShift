@@ -105,12 +105,10 @@ public class Grappling : MonoBehaviour
     DrawRope();
   }
 
-  void StartGrapple() {
+  public void StartGrapple() {
     RaycastHit hit;
-    if (Physics.Raycast(camera.position, camera.forward, out hit, maxDistance, whatIsGrappleable))
-    {
-      if (hit.collider.transform.root == player.transform)
-      {
+    if (Physics.Raycast(camera.position, camera.forward, out hit, maxDistance, whatIsGrappleable)) {
+      if (hit.collider.transform.root == player.transform) {
         return;
       }
 
@@ -127,6 +125,9 @@ public class Grappling : MonoBehaviour
       joint.massScale = 4.5f;
       //joint.tolerance = 10;
       lr.positionCount = 2;
+
+      pm.secondJump = true;
+      pm.grappling = true;
     }
     else
     {
@@ -134,9 +135,10 @@ public class Grappling : MonoBehaviour
     }
   }
 
-  void StopGrapple() {
+  public void StopGrapple() {
     lr.positionCount = 0;
     Destroy(joint);
+    pm.grappling = false;
   }
 
   void DrawRope() {

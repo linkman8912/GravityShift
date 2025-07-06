@@ -8,6 +8,7 @@ public class PlayerMovement : MonoBehaviour {
   [Header("Assignables")]
   public Transform playerCam;
   public Transform orientation;
+  [SerializeField] Grappling gp;
 
   //Other
   private Rigidbody rb;
@@ -36,7 +37,7 @@ public class PlayerMovement : MonoBehaviour {
 
   [Header("Jumping")]
   private bool readyToJump = true;
-  private bool secondJump = true;
+  [HideInInspector] public bool secondJump = true;
   [SerializeField] private float jumpCooldown = 0.25f;
   public float jumpForce = 200;
 
@@ -49,6 +50,8 @@ public class PlayerMovement : MonoBehaviour {
 
   [Header("Ground Slam Effect")]
   [SerializeField] private ParticleSystem slamLandEffect;
+
+  [HideInInspector] public bool grappling = false;
 
 
   //Input
@@ -114,10 +117,8 @@ public class PlayerMovement : MonoBehaviour {
   private void StartCrouch() {
     transform.localScale = crouchScale;
     transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f, transform.position.z);
-    if (rb.velocity.magnitude > 0.5f)
-    {
-      if (grounded)
-      {
+    if (rb.velocity.magnitude > 0.5f) {
+      if (grounded) {
         rb.AddForce(orientation.transform.forward * slideForce);
       }
     }
@@ -138,14 +139,14 @@ public class PlayerMovement : MonoBehaviour {
     rb.useGravity = false;
     //Counteract sliding and sloppy movement
     //CounterMovement(x, y, mag);
-    if (!wallrunning)
-    {
+    if (!wallrunning) {
       rb.useGravity = true;
       rb.AddForce(Vector3.down * Time.deltaTime * 60);
       CounterMovement(x, y, mag);
     }
 
     //If holding jump && ready to jump, then jump
+    if (grappling && (jumping || doubleJumping)) gp.StopGrapple(); 
     if (readyToJump && jumping) Jump();
     if (readyToJump && doubleJumping && !grounded) Jump(true);
 
@@ -153,8 +154,7 @@ public class PlayerMovement : MonoBehaviour {
     float maxSpeed = this.maxSpeed;
 
     //If sliding down a ramp, add force down so player stays grounded and also builds speed
-    if (crouching && grounded && readyToJump)
-    {
+    if (crouching && grounded && readyToJump) {
       rb.AddForce(Vector3.down * Time.deltaTime * 3000);
       return;
     }
@@ -181,13 +181,11 @@ public class PlayerMovement : MonoBehaviour {
     if (grounded && crouching) multiplierV = 0f;
 
     if (slamming && grounded) StopSlam();
-    else if (slamming)
-    {
+    else if (slamming) {
       rb.velocity = new Vector3(0f, -slamVelocity, 0f);
     }
 
-    if (!wallrunning && !slamming)
-    {
+    if (!wallrunning && !slamming) {
       //Apply forces to move player
       rb.AddForce(orientation.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
       rb.AddForce(orientation.right * x * moveSpeed * Time.deltaTime * multiplier);
@@ -196,7 +194,7 @@ public class PlayerMovement : MonoBehaviour {
 
   private void Jump(bool dj = false) {
     bool canJump = false;
-    if ((dj && secondJump && readyToJump) || (!dj && grounded && readyToJump)) canJump = true;
+    if ((dj && secondJump /*&& readyToJump*/) || (!dj && grounded && readyToJump)) canJump = true;
 
     if (canJump) {
       if (dj) {
@@ -245,25 +243,21 @@ public class PlayerMovement : MonoBehaviour {
     if (!grounded || jumping) return;
 
     //Slow down sliding
-    if (crouching)
-    {
+    if (crouching) {
       rb.AddForce(moveSpeed * Time.deltaTime * -rb.velocity.normalized * slideCounterMovement);
       return;
     }
 
     //Counter movement
-    if (Math.Abs(mag.x) > threshold && Math.Abs(x) < 0.05f || (mag.x < -threshold && x > 0) || (mag.x > threshold && x < 0))
-    {
+    if (Math.Abs(mag.x) > threshold && Math.Abs(x) < 0.05f || (mag.x < -threshold && x > 0) || (mag.x > threshold && x < 0)) {
       rb.AddForce(moveSpeed * orientation.transform.right * Time.deltaTime * -mag.x * counterMovement);
     }
-    if (Math.Abs(mag.y) > threshold && Math.Abs(y) < 0.05f || (mag.y < -threshold && y > 0) || (mag.y > threshold && y < 0))
-    {
+    if (Math.Abs(mag.y) > threshold && Math.Abs(y) < 0.05f || (mag.y < -threshold && y > 0) || (mag.y > threshold && y < 0)) {
       rb.AddForce(moveSpeed * orientation.transform.forward * Time.deltaTime * -mag.y * counterMovement);
     }
 
     //Limit diagonal running. This will also cause a full stop if sliding fast and un-crouching, so not optimal.
-    if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed)
-    {
+    if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed) {
       float fallspeed = rb.velocity.y;
       Vector3 n = rb.velocity.normalized * maxSpeed;
       rb.velocity = new Vector3(n.x, fallspeed, n.z);
@@ -296,12 +290,10 @@ public class PlayerMovement : MonoBehaviour {
     if (whatIsGround != (whatIsGround | (1 << layer))) return;
 
     //Iterate through every collision in a physics update
-    for (int i = 0; i < other.contactCount; i++)
-    {
+    for (int i = 0; i < other.contactCount; i++) {
       Vector3 normal = other.contacts[i].normal;
       //FLOOR
-      if (IsFloor(normal))
-      {
+      if (IsFloor(normal)) {
         grounded = true;
         secondJump = true;
         cancellingGrounded = false;
@@ -312,8 +304,7 @@ public class PlayerMovement : MonoBehaviour {
 
     //Invoke ground/wall cancel, since we can't check normals with CollisionExit
     float delay = 3f;
-    if (!cancellingGrounded)
-    {
+    if (!cancellingGrounded) {
       cancellingGrounded = true;
       Invoke(nameof(StopGrounded), Time.deltaTime * delay);
     }

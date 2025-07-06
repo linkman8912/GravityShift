@@ -117,7 +117,7 @@ public class Wallrunning : MonoBehaviour
   void StartWallrun()
   {
     pm.wallrunning = true;
-
+    pm.secondJump = true;
   }
   void WallrunningMovement()
   {
