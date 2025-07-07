@@ -30,6 +30,10 @@ public class CameraManager : MonoBehaviour
     private PerlinShake dynamicShake;
     private LensDistortion lensDistortion;
 
+    private float extraFOVBoost = 0f;
+    public void SetFOVBoost(float boost) => extraFOVBoost = boost;
+
+
     void Start()
     {
         // Grab LensDistortion from the volume
@@ -90,6 +94,7 @@ public class CameraManager : MonoBehaviour
                 targetFOV = Mathf.Lerp(baseFOV, maxFOV, normalizedSpeed);
             }
 
+            targetFOV += extraFOVBoost;
             mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, targetFOV, Time.deltaTime * fovLerpSpeed);
         }
 
