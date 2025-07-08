@@ -185,6 +185,8 @@ public class PlayerMovement : MonoBehaviour {
       rb.velocity = new Vector3(0f, -slamVelocity, 0f);
     }
 
+    if (slamming && grappling) StopSlam();
+
     if (!wallrunning && !slamming) {
       //Apply forces to move player
       rb.AddForce(orientation.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
