@@ -126,7 +126,8 @@ public class Wallrunning : MonoBehaviour
         {
             StopWallrun();
         }
-        else if (exitedWallrunRecently && Input.GetButtonDown("Jump") && readyToWallrun)
+
+        else if (exitedWallrunRecently && Input.GetButtonDown("Jump") && readyToWallrun && lastWallObject != null)
         {
             Walljump(lastWallNormal, lastWallObject);
             exitedWallrunRecently = false;
@@ -163,10 +164,41 @@ public class Wallrunning : MonoBehaviour
     {
         if (pm.wallrunning)
         {
+            // Store the current velocity before stopping wallrun
+            Vector3 currentVelocity = rb.velocity;
+
             exitedWallrunRecently = true;
             wallCoyoteTimer = wallCoyoteTime;
-            lastWallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
-            lastWallObject = wallRight ? rightWallHit.collider.gameObject : leftWallHit.collider.gameObject;
+
+            // Safely get wall normal and object - check if collider exists
+            if (wallRight && rightWallHit.collider != null)
+            {
+                lastWallNormal = rightWallHit.normal;
+                lastWallObject = rightWallHit.collider.gameObject;
+            }
+            else if (wallLeft && leftWallHit.collider != null)
+            {
+                lastWallNormal = leftWallHit.normal;
+                lastWallObject = leftWallHit.collider.gameObject;
+            }
+            else
+            {
+                // If no valid wall hit, preserve the last known normal or use a default
+                // Don't set to Vector3.zero as this loses direction information
+                if (lastWallNormal == Vector3.zero)
+                {
+                    // Use a reasonable default based on the last known wall side
+                    lastWallNormal = wallRight ? Vector3.left : Vector3.right;
+                }
+                lastWallObject = null;
+            }
+
+            // Re-enable gravity
+            rb.useGravity = true;
+
+            // Preserve horizontal momentum when exiting wallrun
+            // Add a small downward velocity to make the transition feel natural
+            rb.velocity = new Vector3(currentVelocity.x, currentVelocity.y - 2f, currentVelocity.z);
         }
 
         pm.wallrunning = false;
@@ -182,7 +214,7 @@ public class Wallrunning : MonoBehaviour
 
     void Walljump(Vector3 wallNormal, GameObject wallObj)
     {
-        if (wallObj == mostRecentWalljump) return;
+        if (wallObj == null || wallObj == mostRecentWalljump) return;
 
         Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
