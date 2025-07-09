@@ -12,7 +12,7 @@ public class Grappling : MonoBehaviour
     public KeyCode pullKey = KeyCode.Tab;
     public float pullSpeed = 30f;
     public float pullBudget = 2f; // The amount of time you have to use the pull key, this gets refilled over time after a short delay.
-    float pullBudgetTime; // The modifiable version
+    public float pullBudgetTime; // The modifiable version - made public so UIHolder can access it
     [SerializeField] const float pullRefillRate = 2f; // The rate that the pullBudget gets refilled when it's being recharged, in seconds of budget per second of recharge.
     [SerializeField] const float pullRefillDelay = 0.5f; // The delay before pullbudget gets refilled.
     float pullRefillTimer = 0; // The modifiable version

@@ -7,6 +7,7 @@ public class UIHolder : MonoBehaviour
     [Header("Crosshair Settings")]
     [SerializeField] private Image crosshair;
     [SerializeField] private Grappling grapplingScript;
+    [SerializeField] private PlayerMovement playerMovement;
 
     [Header("Crosshair Feedback")]
     [SerializeField] private float minScale = 0.5f;
@@ -17,7 +18,18 @@ public class UIHolder : MonoBehaviour
     [SerializeField] private float visualFeedbackRange = 100f; // Distance at which size scaling starts
 
     [Header("Pull Bar Settings")]
-    [SerializeField] private Slider pullBar;
+    [SerializeField] private Image pullBarImage;
+    [SerializeField] private float maxFillAmount = 0.5f; // 0.5 for semi-circle, 1.0 for full circle
+    [SerializeField] private Color fullPullColor = Color.cyan;
+    [SerializeField] private Color emptyPullColor = Color.red;
+    [SerializeField] private float fadeSpeed = 3f; // How fast the pull bar fades in/out
+    [SerializeField] private float hideDelayAfterFull = 2f; // Seconds to wait after full regen before hiding
+
+    private float targetAlpha = 0f;
+    private float currentAlpha = 0f;
+    private float hideTimer = 0f;
+    private bool wasRegenerating = false;
+    private bool wasPulling = false;
 
     private Vector3 originalScale;
     private Color originalColor;
@@ -31,6 +43,9 @@ public class UIHolder : MonoBehaviour
 
         if (grapplingScript == null)
             grapplingScript = FindObjectOfType<Grappling>();
+
+        if (playerMovement == null)
+            playerMovement = FindObjectOfType<PlayerMovement>();
 
         if (crosshair != null)
         {
@@ -54,36 +69,120 @@ public class UIHolder : MonoBehaviour
             Debug.LogError("UIHolder: Grappling script not found!");
         if (playerCamera == null)
             Debug.LogError("UIHolder: Player camera not found!");
-        if (pullBar == null)
-            Debug.LogError("UIHolder: Pull Bar Slider not found! Please assign it in the inspector.");
+        if (pullBarImage == null)
+            Debug.LogError("UIHolder: Pull Bar Image not found! Please assign it in the inspector.");
+        if (playerMovement == null)
+            Debug.LogError("UIHolder: PlayerMovement component not found on player!");
     }
 
     void Update()
     {
         UpdateCrosshairFeedback();
+        UpdatePullBarVisibility();
     }
 
     void InitializePullBar()
     {
-        if (pullBar == null)
+        if (pullBarImage == null)
         {
-            // Try to find pull bar if not assigned
-            pullBar = GameObject.Find("PullBar")?.GetComponent<Slider>();
+            // Try to find pull bar image if not assigned
+            pullBarImage = GameObject.Find("PullBarImage")?.GetComponent<Image>();
         }
 
-        if (pullBar != null && grapplingScript != null)
+        if (pullBarImage != null)
         {
-            pullBar.maxValue = grapplingScript.pullBudget;
-            pullBar.value = grapplingScript.pullBudget;
+            // Set initial fill amount to max (full pull budget)
+            pullBarImage.fillAmount = maxFillAmount;
+
+            // Start with pull bar invisible
+            currentAlpha = 0f;
+            targetAlpha = 0f;
+            UpdatePullBarAlpha();
         }
     }
 
-    public void SetPull(float time)
+    public void SetPull(float currentPullTime)
     {
-        if (pullBar != null)
+        if (pullBarImage != null && grapplingScript != null)
         {
-            pullBar.value = time;
+            // Calculate fill amount based on current pull time vs max pull budget
+            float fillPercentage = currentPullTime / grapplingScript.pullBudget;
+            pullBarImage.fillAmount = fillPercentage * maxFillAmount;
+
+            // Optional: Change color based on pull amount
+            Color targetColor = Color.Lerp(emptyPullColor, fullPullColor, fillPercentage);
+            pullBarImage.color = new Color(targetColor.r, targetColor.g, targetColor.b, currentAlpha);
         }
+    }
+
+    void UpdatePullBarVisibility()
+    {
+        if (pullBarImage == null || grapplingScript == null || playerMovement == null)
+            return;
+
+        bool isCurrentlyPulling = grapplingScript.isGrappling() && Input.GetKey(grapplingScript.pullKey);
+        bool isCurrentlyRegenerating = IsRegenerating();
+        bool isPullBarFull = Mathf.Approximately(grapplingScript.pullBudget, GetCurrentPullTime());
+
+        // Check if we just finished regenerating
+        if (wasRegenerating && !isCurrentlyRegenerating && isPullBarFull)
+        {
+            hideTimer = hideDelayAfterFull;
+        }
+
+        // Determine if pull bar should be visible
+        // Show if: pulling, regenerating, not full, or within hide delay after becoming full
+        bool shouldShow = isCurrentlyPulling || isCurrentlyRegenerating || !isPullBarFull || hideTimer > 0;
+
+        if (shouldShow)
+        {
+            targetAlpha = 1f;
+        }
+        else
+        {
+            targetAlpha = 0f;
+        }
+
+        // Update hide timer
+        if (hideTimer > 0)
+        {
+            hideTimer -= Time.deltaTime;
+        }
+
+        // Smooth alpha transition
+        currentAlpha = Mathf.Lerp(currentAlpha, targetAlpha, Time.deltaTime * fadeSpeed);
+        UpdatePullBarAlpha();
+
+        // Store previous states
+        wasRegenerating = isCurrentlyRegenerating;
+        wasPulling = isCurrentlyPulling;
+    }
+
+    void UpdatePullBarAlpha()
+    {
+        if (pullBarImage != null)
+        {
+            Color currentColor = pullBarImage.color;
+            pullBarImage.color = new Color(currentColor.r, currentColor.g, currentColor.b, currentAlpha);
+        }
+    }
+
+    bool IsRegenerating()
+    {
+        if (grapplingScript == null || playerMovement == null)
+            return false;
+
+        // Check if pull budget is less than max and player is grounded/wallrunning
+        float currentPull = GetCurrentPullTime();
+        bool canRegenerate = (playerMovement.grounded || playerMovement.wallrunning);
+
+        return currentPull < grapplingScript.pullBudget && canRegenerate;
+    }
+
+    float GetCurrentPullTime()
+    {
+        if (grapplingScript == null) return 0f;
+        return grapplingScript.pullBudgetTime;
     }
 
     void UpdateCrosshairFeedback()
