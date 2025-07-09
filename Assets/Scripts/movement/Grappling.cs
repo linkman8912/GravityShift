@@ -17,7 +17,7 @@ public class Grappling : MonoBehaviour
     [SerializeField] const float pullRefillDelay = 0.5f; // The delay before pullbudget gets refilled.
     float pullRefillTimer = 0; // The modifiable version
     public Transform gunTip, camera, player;
-    public float maxDistance = 100000f;
+    public float maxDistance = 50f;
     private SpringJoint joint;
     private PlayerMovement pm;
     public Transform gunTipBase;

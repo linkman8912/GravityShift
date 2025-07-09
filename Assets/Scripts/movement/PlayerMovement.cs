@@ -140,10 +140,13 @@ public class PlayerMovement : MonoBehaviour {
     //Counteract sliding and sloppy movement
     //CounterMovement(x, y, mag);
     if (!wallrunning) {
-      rb.useGravity = true;
-      rb.AddForce(Vector3.down * Time.deltaTime * 60);
+      rb.AddForce(Physics.gravity);
+      //rb.useGravity = true;
+      //rb.AddForce(Vector3.down * Time.deltaTime * 60);
       CounterMovement(x, y, mag);
     }
+    else
+      rb.AddForce(Physics.gravity / 3);
 
     //If holding jump && ready to jump, then jump
     if (grappling && (jumping || doubleJumping)) gp.StopGrapple(); 
@@ -209,14 +212,14 @@ public class PlayerMovement : MonoBehaviour {
       if (slamJumpTimer > 0) {
         // Add jump forces
         float velocity = Mathf.Sqrt(slamStartingHeight * -2 * Physics.gravity.y) / 1.8f - (Time.fixedDeltaTime * Physics.gravity.y / 2);
-        if (velocity > jumpForce * 1.5f) {
+        //if (velocity > jumpForce * 1.5f) {
           rb.AddForce(Vector2.up * velocity, ForceMode.VelocityChange);
           rb.AddForce(normalVector * velocity, ForceMode.VelocityChange);
-        }
+        /*}
         else {
           rb.AddForce(Vector2.up * jumpForce * 1.5f);
           rb.AddForce(normalVector * jumpForce * 0.5f);
-        }
+        }*/
       }
       else {
         // Add jump forces
