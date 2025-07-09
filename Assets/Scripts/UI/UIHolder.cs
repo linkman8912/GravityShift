@@ -16,6 +16,9 @@ public class UIHolder : MonoBehaviour
     [SerializeField] private float transitionSpeed = 5f;
     [SerializeField] private float visualFeedbackRange = 100f; // Distance at which size scaling starts
 
+    [Header("Pull Bar Settings")]
+    [SerializeField] private Slider pullBar;
+
     private Vector3 originalScale;
     private Color originalColor;
     private Camera playerCamera;
@@ -41,6 +44,9 @@ public class UIHolder : MonoBehaviour
             playerCamera = grapplingScript.camera.GetComponent<Camera>();
         }
 
+        // Initialize pull bar
+        InitializePullBar();
+
         // Validation
         if (crosshair == null)
             Debug.LogError("UIHolder: Crosshair Image not found! Make sure there's a UI Image named 'Crosshair' in your scene.");
@@ -48,11 +54,36 @@ public class UIHolder : MonoBehaviour
             Debug.LogError("UIHolder: Grappling script not found!");
         if (playerCamera == null)
             Debug.LogError("UIHolder: Player camera not found!");
+        if (pullBar == null)
+            Debug.LogError("UIHolder: Pull Bar Slider not found! Please assign it in the inspector.");
     }
 
     void Update()
     {
         UpdateCrosshairFeedback();
+    }
+
+    void InitializePullBar()
+    {
+        if (pullBar == null)
+        {
+            // Try to find pull bar if not assigned
+            pullBar = GameObject.Find("PullBar")?.GetComponent<Slider>();
+        }
+
+        if (pullBar != null && grapplingScript != null)
+        {
+            pullBar.maxValue = grapplingScript.pullBudget;
+            pullBar.value = grapplingScript.pullBudget;
+        }
+    }
+
+    public void SetPull(float time)
+    {
+        if (pullBar != null)
+        {
+            pullBar.value = time;
+        }
     }
 
     void UpdateCrosshairFeedback()
@@ -120,5 +151,4 @@ public class UIHolder : MonoBehaviour
         Color targetColor = new Color(originalColor.r, originalColor.g, originalColor.b, targetOpacity);
         crosshair.color = Color.Lerp(currentColor, targetColor, Time.deltaTime * transitionSpeed);
     }
-
 }

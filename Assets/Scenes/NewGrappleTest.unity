@@ -961,16 +961,16 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 5c9dbcb3f1732764793dc38f3adf7dba, type: 3}
---- !u!114 &415522568 stripped
+--- !u!114 &415522570 stripped
 MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7260917955145205054, guid: 8709ee89ddf351503919a485c1ea5e92,
+  m_CorrespondingSourceObject: {fileID: 4440214815978744248, guid: 8709ee89ddf351503919a485c1ea5e92,
     type: 3}
   m_PrefabInstance: {fileID: 3247016036735311416}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6579f367d2bb51201b0deb5dc9458872, type: 3}
+  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1001 &418092851
@@ -2479,6 +2479,8 @@ MonoBehaviour:
   inRangeOpacity: 1
   outOfRangeOpacity: 0.3
   transitionSpeed: 5
+  visualFeedbackRange: 100
+  pullBar: {fileID: 415522570}
 --- !u!1001 &937983678
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5773,7 +5775,7 @@ PrefabInstance:
         type: 3}
       propertyPath: pb
       value: 
-      objectReference: {fileID: 415522568}
+      objectReference: {fileID: 0}
     - target: {fileID: 3373622507037599215, guid: 8709ee89ddf351503919a485c1ea5e92,
         type: 3}
       propertyPath: maxDistance
@@ -5804,7 +5806,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: Example player prefab
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7260917955145205054, guid: 8709ee89ddf351503919a485c1ea5e92, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 3978095566409717849, guid: 8709ee89ddf351503919a485c1ea5e92,
