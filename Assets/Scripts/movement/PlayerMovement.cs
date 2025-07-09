@@ -140,16 +140,14 @@ public class PlayerMovement : MonoBehaviour {
     //Counteract sliding and sloppy movement
     //CounterMovement(x, y, mag);
     if (!wallrunning) {
-      rb.AddForce(Physics.gravity);
-      //rb.useGravity = true;
+      //rb.AddForce(Physics.gravity);
+      rb.useGravity = true;
       //rb.AddForce(Vector3.down * Time.deltaTime * 60);
       CounterMovement(x, y, mag);
     }
-    else
-      rb.AddForce(Physics.gravity / 3);
 
     //If holding jump && ready to jump, then jump
-    if (grappling && (jumping || doubleJumping)) gp.StopGrapple(); 
+    //if (grappling && (jumping || doubleJumping)) gp.StopGrapple(); 
     if (readyToJump && jumping) Jump();
     if (readyToJump && doubleJumping && !grounded) Jump(true);
 

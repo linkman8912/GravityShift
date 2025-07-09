@@ -89,7 +89,7 @@ public class Wallrunning : MonoBehaviour {
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        if ((wallLeft || wallRight) /*&& verticalInput > 0*/ && AboveGround() && readyToWallrun /*&& ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft))*/) {
+        if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround() && readyToWallrun && ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft))) {
             if (!pm.wallrunning) {
                 StartWallrun();
             }
@@ -124,21 +124,20 @@ public class Wallrunning : MonoBehaviour {
     }
 
     void WallrunningMovement() {
-        /*rb.useGravity = false;
-        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-
         Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
         Vector3 wallForward = Vector3.Cross(wallNormal, transform.up);
-
         if ((orientation.forward - wallForward).magnitude > (orientation.forward - -wallForward).magnitude)
             wallForward = -wallForward;
+        //if (Vector3.Angle(rb.velocity.normalized, wallForward) <= wallMomentumAngle) {
+        rb.velocity = rb.velocity.magnitude * wallForward;
+        //}
 
-        if (Vector3.Angle(rb.velocity.normalized, wallForward) <= wallMomentumAngle) {
-            rb.velocity = rb.velocity.magnitude * wallForward;
-        }
+
+        rb.useGravity = false;
+        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
 
         rb.AddForce(wallForward * wallRunForce, ForceMode.Force);
-        rb.AddForce(-wallNormal * wallRunForce / 2, ForceMode.Force);*/
+        rb.AddForce(-wallNormal * wallRunForce / 2, ForceMode.Force);
     }
 
     void StopWallrun() {
