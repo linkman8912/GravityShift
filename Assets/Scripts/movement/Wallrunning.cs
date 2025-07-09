@@ -6,7 +6,7 @@ public class Wallrunning : MonoBehaviour {
   [Header("Wallrunning")]
   [SerializeField] private LayerMask whatIsWall;
   private LayerMask whatIsGround;
-  [SerializeField] private float wallRunForce = 200;
+  [SerializeField] private float wallRunForce = 3;
   [SerializeField] private float maxWallrunTime = 1.5f;
   [SerializeField] private float wallMomentumAngle = 40;
   [SerializeField] private float wallrunDelay = 0.5f;
