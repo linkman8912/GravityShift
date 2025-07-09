@@ -93,13 +93,11 @@ public class Wallrunning : MonoBehaviour
         return !Physics.Raycast(transform.position, Vector3.down, minJumpHeight, whatIsGround);
     }
 
-    void StateMachine()
-    {
+    void StateMachine() {
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround() && readyToWallrun && ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft)))
-        {
+        if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround() && readyToWallrun && ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft))) {
             if (!pm.wallrunning)
             {
                 StartWallrun();
@@ -122,8 +120,7 @@ public class Wallrunning : MonoBehaviour
                 Walljump();
             }
         }
-        else if (pm.wallrunning)
-        {
+        else if (pm.wallrunning) {
             StopWallrun();
         }
         else if (exitedWallrunRecently && Input.GetButtonDown("Jump") && readyToWallrun)
