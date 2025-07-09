@@ -2,14 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Wallrunning : MonoBehaviour {
+public class Wallrunning : MonoBehaviour
+{
     [Header("Wallrunning")]
     [SerializeField] private LayerMask whatIsWall;
     private LayerMask whatIsGround;
     [SerializeField] private float wallRunForce = 200;
     [SerializeField] private float maxWallrunTime = 1.5f;
     [SerializeField] private float wallMomentumAngle = 40;
-    [SerializeField] private float wallrunDelay = 0.5f;
+    [SerializeField] private float wallrunDelay = 0.3f;
     private float targetCameraLean;
     private float wallrunTimer;
     private bool readyToWallrun = true;
@@ -17,7 +18,7 @@ public class Wallrunning : MonoBehaviour {
     [Header("Walljumping")]
     [SerializeField] private float walljumpUpForce = 100f;
     [SerializeField] private float walljumpSideForce = 50f;
-    //private GameObject mostRecentWalljump;
+    private GameObject mostRecentWalljump;
 
     [Header("Coyote Time")]
     [SerializeField] private float wallCoyoteTime = 0.5f;
@@ -49,82 +50,99 @@ public class Wallrunning : MonoBehaviour {
     [SerializeField] private float cameraLeanAngle = 15f;
     [SerializeField] private float cameraLeanSpeed = 5f;
 
-    void Start() {
+    void Start()
+    {
         rb = GetComponent<Rigidbody>();
         pm = GetComponent<PlayerMovement>();
         whatIsGround = pm.whatIsGround;
         footsteps = GetComponent<Footsteps>();
     }
 
-    void Update() {
+    void Update()
+    {
         StateMachine();
-        //if (pm.grounded) mostRecentWalljump = null;
+        if (pm.grounded) mostRecentWalljump = null;
         HandleCameraLean();
 
         // Handle wall coyote time timer
-        if (exitedWallrunRecently) {
+        if (exitedWallrunRecently)
+        {
             wallCoyoteTimer -= Time.deltaTime;
-            if (wallCoyoteTimer <= 0f) {
+            if (wallCoyoteTimer <= 0f)
+            {
                 exitedWallrunRecently = false;
             }
         }
     }
 
-    void FixedUpdate() {
+    void FixedUpdate()
+    {
         CheckForWall();
         if (pm.wallrunning)
             WallrunningMovement();
     }
 
-    private void CheckForWall() {
+    private void CheckForWall()
+    {
         wallRight = Physics.Raycast(transform.position, orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
         wallLeft = Physics.Raycast(transform.position, -orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
     }
 
-    private bool AboveGround() {
+    private bool AboveGround()
+    {
         return !Physics.Raycast(transform.position, Vector3.down, minJumpHeight, whatIsGround);
     }
 
-    void StateMachine() {
+    void StateMachine()
+    {
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        if ((wallLeft || wallRight) /*&& verticalInput > 0*/ && AboveGround() && readyToWallrun /*&& ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft))*/) {
-            if (!pm.wallrunning) {
+        if ((wallLeft || wallRight) && verticalInput > 0 && AboveGround() && readyToWallrun && ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft)))
+        {
+            if (!pm.wallrunning)
+            {
                 StartWallrun();
             }
 
             footsteps.PlayFootstep();
 
-            if (wallrunTimer < maxWallrunTime) {
+            if (wallrunTimer < maxWallrunTime)
+            {
                 wallrunTimer += Time.deltaTime;
             }
-            else {
+            else
+            {
                 StopWallrun();
             }
 
-            if (Input.GetButtonDown("Jump")) {
+            if (Input.GetButtonDown("Jump"))
+            {
                 StopWallrun();
                 Walljump();
             }
         }
-        else if (pm.wallrunning) {
+        else if (pm.wallrunning)
+        {
             StopWallrun();
         }
 
-        else if (exitedWallrunRecently && Input.GetButtonDown("Jump") && readyToWallrun && lastWallObject != null) {
+        else if (exitedWallrunRecently && Input.GetButtonDown("Jump") && readyToWallrun && lastWallObject != null)
+        {
             Walljump(lastWallNormal, lastWallObject);
             exitedWallrunRecently = false;
         }
     }
 
-    void StartWallrun() {
+    void StartWallrun()
+    {
         pm.wallrunning = true;
         pm.secondJump = true;
     }
 
-    void WallrunningMovement() {
-        /*rb.useGravity = false;
+    void WallrunningMovement()
+    {
+        rb.useGravity = false;
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
 
         Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
@@ -133,16 +151,19 @@ public class Wallrunning : MonoBehaviour {
         if ((orientation.forward - wallForward).magnitude > (orientation.forward - -wallForward).magnitude)
             wallForward = -wallForward;
 
-        if (Vector3.Angle(rb.velocity.normalized, wallForward) <= wallMomentumAngle) {
+        if (Vector3.Angle(rb.velocity.normalized, wallForward) <= wallMomentumAngle)
+        {
             rb.velocity = rb.velocity.magnitude * wallForward;
         }
 
         rb.AddForce(wallForward * wallRunForce, ForceMode.Force);
-        rb.AddForce(-wallNormal * wallRunForce / 2, ForceMode.Force);*/
+        rb.AddForce(-wallNormal * wallRunForce / 2, ForceMode.Force);
     }
 
-    void StopWallrun() {
-        if (pm.wallrunning) {
+    void StopWallrun()
+    {
+        if (pm.wallrunning)
+        {
             // Store the current velocity before stopping wallrun
             Vector3 currentVelocity = rb.velocity;
 
@@ -150,18 +171,22 @@ public class Wallrunning : MonoBehaviour {
             wallCoyoteTimer = wallCoyoteTime;
 
             // Safely get wall normal and object - check if collider exists
-            if (wallRight && rightWallHit.collider != null) {
+            if (wallRight && rightWallHit.collider != null)
+            {
                 lastWallNormal = rightWallHit.normal;
                 lastWallObject = rightWallHit.collider.gameObject;
             }
-            else if (wallLeft && leftWallHit.collider != null) {
+            else if (wallLeft && leftWallHit.collider != null)
+            {
                 lastWallNormal = leftWallHit.normal;
                 lastWallObject = leftWallHit.collider.gameObject;
             }
-            else {
+            else
+            {
                 // If no valid wall hit, preserve the last known normal or use a default
                 // Don't set to Vector3.zero as this loses direction information
-                if (lastWallNormal == Vector3.zero) {
+                if (lastWallNormal == Vector3.zero)
+                {
                     // Use a reasonable default based on the last known wall side
                     lastWallNormal = wallRight ? Vector3.left : Vector3.right;
                 }
@@ -180,30 +205,33 @@ public class Wallrunning : MonoBehaviour {
         wallrunTimer = 0;
     }
 
-    void Walljump() {
+    void Walljump()
+    {
         Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
         GameObject currentTarget = wallRight ? rightWallHit.collider.gameObject : leftWallHit.collider.gameObject;
         Walljump(wallNormal, currentTarget);
     }
 
-    void Walljump(Vector3 wallNormal, GameObject wallObj) {
-        if (wallObj == null /*|| wallObj == mostRecentWalljump*/) return;
-        wallNormal = wallRight ? -transform.right : transform.right;
-        //Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
+    void Walljump(Vector3 wallNormal, GameObject wallObj)
+    {
+        if (wallObj == null || wallObj == mostRecentWalljump) return;
+
         Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
         rb.AddForce(forceToApply, ForceMode.Impulse);
-        //mostRecentWalljump = wallObj;
+        mostRecentWalljump = wallObj;
         readyToWallrun = false;
         Invoke("ResetWallrunDelay", wallrunDelay);
         footsteps.PlayFootstep();
     }
 
-    void ResetWallrunDelay() {
+    void ResetWallrunDelay()
+    {
         readyToWallrun = true;
     }
 
-    private void HandleCameraLean() {
+    private void HandleCameraLean()
+    {
         targetCameraLean = wallLeft && pm.wallrunning ? -cameraLeanAngle
             : wallRight && pm.wallrunning ? cameraLeanAngle
             : 0f;
