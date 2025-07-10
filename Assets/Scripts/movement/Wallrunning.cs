@@ -72,10 +72,12 @@ public class Wallrunning : MonoBehaviour {
 
   void FixedUpdate() {
     CheckForWall();
-    if (pm.wallrunning)
-      if (!(wallLeft || wallRight))
+    if (pm.wallrunning) {
+      if (!(wallLeft || wallRight)) {
         StopWallrun();
-    WallrunningMovement();
+      }
+      WallrunningMovement();
+    }
   }
 
   private void CheckForWall() {
