@@ -76,7 +76,9 @@ public class Wallrunning : MonoBehaviour {
       if (!(wallLeft || wallRight)) {
         StopWallrun();
       }
-      WallrunningMovement();
+      else {
+        WallrunningMovement();
+      }
     }
   }
 
