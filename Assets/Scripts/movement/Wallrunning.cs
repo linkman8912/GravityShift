@@ -10,7 +10,7 @@ public class Wallrunning : MonoBehaviour
     [SerializeField] private float wallRunForce = 200;
     [SerializeField] private float maxWallrunTime = 1.5f;
     [SerializeField] private float wallMomentumAngle = 40;
-    [SerializeField] private float wallrunDelay = 0.5f;
+    [SerializeField] private float wallrunDelay = 0.3f;
     private float targetCameraLean;
     private float wallrunTimer;
     private bool readyToWallrun = true;
@@ -18,7 +18,7 @@ public class Wallrunning : MonoBehaviour
     [Header("Walljumping")]
     [SerializeField] private float walljumpUpForce = 100f;
     [SerializeField] private float walljumpSideForce = 50f;
-    //private GameObject mostRecentWalljump;
+    private GameObject mostRecentWalljump;
 
     [Header("Coyote Time")]
     [SerializeField] private float wallCoyoteTime = 0.5f;
@@ -61,7 +61,7 @@ public class Wallrunning : MonoBehaviour
     void Update()
     {
         StateMachine();
-        //if (pm.grounded) mostRecentWalljump = null;
+        if (pm.grounded) mostRecentWalljump = null;
         HandleCameraLean();
 
         // Handle wall coyote time timer
@@ -142,17 +142,19 @@ public class Wallrunning : MonoBehaviour
 
     void WallrunningMovement()
     {
-        Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
-        Vector3 wallForward = Vector3.Cross(wallNormal, transform.up);
-        if ((orientation.forward - wallForward).magnitude > (orientation.forward - -wallForward).magnitude)
-            wallForward = -wallForward;
-        //if (Vector3.Angle(rb.velocity.normalized, wallForward) <= wallMomentumAngle) {
-        rb.velocity = rb.velocity.magnitude * wallForward;
-        //}
-
-
         rb.useGravity = false;
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+
+        Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+        Vector3 wallForward = Vector3.Cross(wallNormal, transform.up);
+
+        if ((orientation.forward - wallForward).magnitude > (orientation.forward - -wallForward).magnitude)
+            wallForward = -wallForward;
+
+        if (Vector3.Angle(rb.velocity.normalized, wallForward) <= wallMomentumAngle)
+        {
+            rb.velocity = rb.velocity.magnitude * wallForward;
+        }
 
         rb.AddForce(wallForward * wallRunForce, ForceMode.Force);
         rb.AddForce(-wallNormal * wallRunForce / 2, ForceMode.Force);
@@ -212,13 +214,12 @@ public class Wallrunning : MonoBehaviour
 
     void Walljump(Vector3 wallNormal, GameObject wallObj)
     {
-        if (wallObj == null /*|| wallObj == mostRecentWalljump*/) return;
-        wallNormal = wallRight ? -transform.right : transform.right;
-        //Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
+        if (wallObj == null || wallObj == mostRecentWalljump) return;
+
         Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
         rb.AddForce(forceToApply, ForceMode.Impulse);
-        //mostRecentWalljump = wallObj;
+        mostRecentWalljump = wallObj;
         readyToWallrun = false;
         Invoke("ResetWallrunDelay", wallrunDelay);
         footsteps.PlayFootstep();

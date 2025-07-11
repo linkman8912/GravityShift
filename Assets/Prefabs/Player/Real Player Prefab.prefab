@@ -6159,7 +6159,7 @@ MonoBehaviour:
   whatIsWall:
     serializedVersion: 2
     m_Bits: 11007
-  wallRunForce: 5
+  wallRunForce: 3
   maxWallrunTime: 1.5
   wallMomentumAngle: 60
   wallrunDelay: 0.3
