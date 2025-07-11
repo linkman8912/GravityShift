@@ -50,12 +50,82 @@ public class Wallrunning : MonoBehaviour
     [SerializeField] private float cameraLeanAngle = 15f;
     [SerializeField] private float cameraLeanSpeed = 5f;
 
+<<<<<<< HEAD
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         pm = GetComponent<PlayerMovement>();
         whatIsGround = pm.whatIsGround;
         footsteps = GetComponent<Footsteps>();
+=======
+  void Start() {
+    rb = GetComponent<Rigidbody>();
+    pm = GetComponent<PlayerMovement>();
+    whatIsGround = pm.whatIsGround;
+    footsteps = GetComponent<Footsteps>();
+  }
+
+  void Update() {
+    StateMachine();
+    //if (pm.grounded) mostRecentWalljump = null;
+    HandleCameraLean();
+
+    // Handle wall coyote time timer
+    if (exitedWallrunRecently) {
+      wallCoyoteTimer -= Time.deltaTime;
+      if (wallCoyoteTimer <= 0f) {
+        exitedWallrunRecently = false;
+      }
+    }
+  }
+
+  void FixedUpdate() {
+    CheckForWall();
+    if (pm.wallrunning) {
+      if (!(wallLeft || wallRight)) {
+        StopWallrun();
+      }
+      else {
+        WallrunningMovement();
+      }
+    }
+  }
+
+  private void CheckForWall() {
+    wallRight = Physics.Raycast(transform.position, orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
+    wallLeft = Physics.Raycast(transform.position, -orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
+  }
+
+  private bool AboveGround() {
+    return !Physics.Raycast(transform.position, Vector3.down, minJumpHeight, whatIsGround);
+  }
+
+  void StateMachine() {
+    horizontalInput = Input.GetAxisRaw("Horizontal");
+    verticalInput = Input.GetAxisRaw("Vertical");
+
+    if (/*(wallLeft || wallRight) &&*/ verticalInput > 0 && AboveGround() && readyToWallrun && ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft))) {
+      if (!pm.wallrunning) {
+        StartWallrun();
+      }
+
+      footsteps.PlayFootstep();
+
+      if (wallrunTimer < maxWallrunTime) {
+        wallrunTimer += Time.deltaTime;
+      }
+      else {
+        StopWallrun();
+      }
+
+      if (Input.GetButtonDown("Jump")) {
+        StopWallrun();
+        Walljump();
+      }
+    }
+    else if (pm.wallrunning) {
+      StopWallrun();
+>>>>>>> 7d446f6c9488f7312afad15b7137949a97a2c7f1
     }
 
     void Update()
