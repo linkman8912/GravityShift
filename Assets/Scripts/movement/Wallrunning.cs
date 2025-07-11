@@ -15,10 +15,17 @@ public class Wallrunning : MonoBehaviour
     private float wallrunTimer;
     private bool readyToWallrun = true;
 
+    [Header("Wall Transition")]
+    [SerializeField] private float maxTransitionAngle = 30f; // Maximum angle between walls to allow transition
+    [SerializeField] private float transitionSmoothness = 10f; // How smooth the transition is
+    [SerializeField] private float transitionCheckDistance = 1.5f; // How far ahead to check for wall transitions
+    private Vector3 currentWallNormal;
+    private Vector3 currentWallForward;
+    private bool isTransitioning = false;
+
     [Header("Walljumping")]
     [SerializeField] private float walljumpUpForce = 100f;
     [SerializeField] private float walljumpSideForce = 50f;
-    //private GameObject mostRecentWalljump;
 
     [Header("Coyote Time")]
     [SerializeField] private float wallCoyoteTime = 0.5f;
@@ -61,7 +68,6 @@ public class Wallrunning : MonoBehaviour
     void Update()
     {
         StateMachine();
-        //if (pm.grounded) mostRecentWalljump = null;
         HandleCameraLean();
 
         // Handle wall coyote time timer
@@ -80,13 +86,18 @@ public class Wallrunning : MonoBehaviour
         CheckForWall();
         if (pm.wallrunning)
         {
-            if (!(wallLeft || wallRight))
+            // Check for wall transitions first
+            if (!CheckForWallTransition())
             {
-                StopWallrun();
-            }
-            else
-            {
-                WallrunningMovement();
+                // If no transition available and no wall, stop wallrun
+                if (!(wallLeft || wallRight))
+                {
+                    StopWallrun();
+                }
+                else
+                {
+                    WallrunningMovement();
+                }
             }
         }
     }
@@ -95,6 +106,131 @@ public class Wallrunning : MonoBehaviour
     {
         wallRight = Physics.Raycast(transform.position, orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
         wallLeft = Physics.Raycast(transform.position, -orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
+    }
+
+    private bool CheckForWallTransition()
+    {
+        if (!pm.wallrunning) return false;
+
+        // Determine which side we're wallrunning on
+        bool isOnRightWall = wallRight && (!wallLeft || rightWallHit.distance < leftWallHit.distance);
+        Vector3 wallDirection = isOnRightWall ? orientation.right : -orientation.right;
+        RaycastHit currentWallHit = isOnRightWall ? rightWallHit : leftWallHit;
+
+        // Check ahead in the movement direction for potential wall transitions
+        Vector3 checkOrigin = transform.position + currentWallForward * transitionCheckDistance;
+        RaycastHit transitionHit;
+
+        // Cast multiple rays to detect corner transitions
+        bool foundTransition = false;
+        Vector3 bestTransitionNormal = Vector3.zero;
+        float bestAngle = maxTransitionAngle;
+
+        // Check in an arc around the current wall direction
+        for (float angle = -60f; angle <= 60f; angle += 10f)
+        {
+            Vector3 checkDirection = Quaternion.AngleAxis(angle, Vector3.up) * wallDirection;
+            if (Physics.Raycast(checkOrigin, checkDirection, out transitionHit, wallCheckDistance * 1.5f, whatIsWall))
+            {
+                // Check if this is a different wall (not the current one)
+                float normalAngle = Vector3.Angle(currentWallNormal, transitionHit.normal);
+                if (normalAngle > 5f && normalAngle <= maxTransitionAngle)
+                {
+                    // Check if the wall height is appropriate for continuing wallrun
+                    if (IsWallHeightAppropriate(transitionHit))
+                    {
+                        if (normalAngle < bestAngle)
+                        {
+                            foundTransition = true;
+                            bestTransitionNormal = transitionHit.normal;
+                            bestAngle = normalAngle;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (foundTransition)
+        {
+            // Start transitioning to the new wall
+            StartWallTransition(bestTransitionNormal);
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsWallHeightAppropriate(RaycastHit newWallHit)
+    {
+        // Check if there's ground below the hit point at an appropriate distance
+        Vector3 checkPoint = newWallHit.point;
+        float playerHeight = transform.position.y - checkPoint.y;
+
+        // If the new wall is too high above the player, check if there's wall at player height
+        if (playerHeight > 0.5f)
+        {
+            RaycastHit heightCheckHit;
+            Vector3 playerHeightPoint = new Vector3(checkPoint.x, transform.position.y, checkPoint.z);
+            Vector3 directionToWall = (checkPoint - playerHeightPoint).normalized;
+
+            if (!Physics.Raycast(playerHeightPoint, directionToWall, out heightCheckHit, wallCheckDistance * 2f, whatIsWall))
+            {
+                return false;
+            }
+        }
+
+        // Check if there's enough wall below for running
+        RaycastHit groundCheckHit;
+        if (Physics.Raycast(checkPoint, Vector3.down, out groundCheckHit, minJumpHeight, whatIsGround))
+        {
+            return false; // Too close to ground
+        }
+
+        return true;
+    }
+
+    private void StartWallTransition(Vector3 newWallNormal)
+    {
+        isTransitioning = true;
+        StartCoroutine(TransitionToNewWall(newWallNormal));
+    }
+
+    private IEnumerator TransitionToNewWall(Vector3 newWallNormal)
+    {
+        Vector3 startNormal = currentWallNormal;
+        Vector3 startForward = currentWallForward;
+
+        // Store the current velocity magnitude to preserve momentum
+        float currentSpeed = new Vector3(rb.velocity.x, 0f, rb.velocity.z).magnitude;
+
+        // Calculate new wall forward
+        Vector3 newWallForward = Vector3.Cross(newWallNormal, transform.up);
+        if (Vector3.Angle(currentWallForward, newWallForward) > 90f)
+            newWallForward = -newWallForward;
+
+        float transitionTime = 0.2f;
+        float elapsedTime = 0f;
+
+        while (elapsedTime < transitionTime)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / transitionTime;
+            t = Mathf.SmoothStep(0, 1, t);
+
+            // Smoothly interpolate wall normal and forward
+            currentWallNormal = Vector3.Slerp(startNormal, newWallNormal, t);
+            currentWallForward = Vector3.Slerp(startForward, newWallForward, t);
+
+            // Maintain momentum during transition by setting velocity along interpolated forward
+            Vector3 desiredVelocity = currentWallForward * currentSpeed;
+            rb.velocity = new Vector3(desiredVelocity.x, rb.velocity.y, desiredVelocity.z);
+
+            yield return null;
+        }
+
+        currentWallNormal = newWallNormal;
+        currentWallForward = newWallForward;
+        isTransitioning = false;
     }
 
     private bool AboveGround()
@@ -107,7 +243,7 @@ public class Wallrunning : MonoBehaviour
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        if (/*(wallLeft || wallRight) &&*/ verticalInput > 0 && AboveGround() && readyToWallrun && ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft)))
+        if (verticalInput > 0 && AboveGround() && readyToWallrun && ((horizontalInput > 0 && wallRight) || (horizontalInput < 0 && wallLeft)))
         {
             if (!pm.wallrunning)
             {
@@ -131,11 +267,10 @@ public class Wallrunning : MonoBehaviour
                 Walljump();
             }
         }
-        else if (pm.wallrunning)
+        else if (pm.wallrunning && !isTransitioning)
         {
             StopWallrun();
         }
-
         else if (exitedWallrunRecently && Input.GetButtonDown("Jump") && readyToWallrun && lastWallObject != null)
         {
             Walljump(lastWallNormal, lastWallObject);
@@ -147,37 +282,54 @@ public class Wallrunning : MonoBehaviour
     {
         pm.wallrunning = true;
         pm.secondJump = true;
+
+        // Initialize wall normal and forward
+        if (wallRight)
+        {
+            currentWallNormal = rightWallHit.normal;
+        }
+        else if (wallLeft)
+        {
+            currentWallNormal = leftWallHit.normal;
+        }
+
+        currentWallForward = Vector3.Cross(currentWallNormal, transform.up);
+        if (Vector3.Angle(rb.velocity.normalized, currentWallForward) > 90f)
+            currentWallForward = -currentWallForward;
     }
 
     void WallrunningMovement()
     {
-        Vector3 wallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
-        Vector3 wallForward = Vector3.Cross(wallNormal, transform.up);
-        if ((orientation.forward - wallForward).magnitude > (orientation.forward - -wallForward).magnitude)
-            wallForward = -wallForward;
-        //if (Vector3.Angle(rb.velocity.normalized, wallForward) <= wallMomentumAngle) {
-        rb.velocity = rb.velocity.magnitude * wallForward;
-        //}
+        // Store current velocity magnitude before any modifications
+        float currentSpeed = new Vector3(rb.velocity.x, 0f, rb.velocity.z).magnitude;
 
+        // Update current wall normal if not transitioning
+        if (!isTransitioning)
+        {
+            currentWallNormal = wallRight ? rightWallHit.normal : leftWallHit.normal;
+            currentWallForward = Vector3.Cross(currentWallNormal, transform.up);
+            if ((orientation.forward - currentWallForward).magnitude > (orientation.forward - -currentWallForward).magnitude)
+                currentWallForward = -currentWallForward;
+        }
+
+        // Redirect velocity along the wall while preserving momentum
+        Vector3 redirectedVelocity = currentWallForward * currentSpeed;
 
         rb.useGravity = false;
-        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        rb.velocity = new Vector3(redirectedVelocity.x, 0f, redirectedVelocity.z);
 
-        rb.AddForce(wallForward * wallRunForce, ForceMode.Force);
-        rb.AddForce(-wallNormal * wallRunForce / 2, ForceMode.Force);
+        rb.AddForce(currentWallForward * wallRunForce, ForceMode.Force);
+        rb.AddForce(-currentWallNormal * wallRunForce / 2, ForceMode.Force);
     }
 
     void StopWallrun()
     {
         if (pm.wallrunning)
         {
-            // Store the current velocity before stopping wallrun
-            //Vector3 currentVelocity = rb.velocity;
-
             exitedWallrunRecently = true;
             wallCoyoteTimer = wallCoyoteTime;
 
-            // Safely get wall normal and object - check if collider exists
+            // Safely get wall normal and object
             if (wallRight && rightWallHit.collider != null)
             {
                 lastWallNormal = rightWallHit.normal;
@@ -190,26 +342,19 @@ public class Wallrunning : MonoBehaviour
             }
             else
             {
-                // If no valid wall hit, preserve the last known normal or use a default
-                // Don't set to Vector3.zero as this loses direction information
                 if (lastWallNormal == Vector3.zero)
                 {
-                    // Use a reasonable default based on the last known wall side
                     lastWallNormal = wallRight ? Vector3.left : Vector3.right;
                 }
                 lastWallObject = null;
             }
 
-            // Re-enable gravity
             rb.useGravity = true;
-
-            // Preserve horizontal momentum when exiting wallrun
-            // Add a small downward velocity to make the transition feel natural
-            //rb.velocity = new Vector3(currentVelocity.x, currentVelocity.y/* - 2f*/, currentVelocity.z);
         }
 
         pm.wallrunning = false;
         wallrunTimer = 0;
+        isTransitioning = false;
     }
 
     void Walljump()
@@ -221,13 +366,11 @@ public class Wallrunning : MonoBehaviour
 
     void Walljump(Vector3 wallNormal, GameObject wallObj)
     {
-        if (wallObj == null /*|| wallObj == mostRecentWalljump*/) return;
+        if (wallObj == null) return;
         wallNormal = wallRight ? -transform.right : transform.right;
-        //Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
         Vector3 forceToApply = transform.up * walljumpUpForce / 10 + wallNormal * walljumpSideForce / 10;
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
         rb.AddForce(forceToApply, ForceMode.Impulse);
-        //mostRecentWalljump = wallObj;
         readyToWallrun = false;
         Invoke("ResetWallrunDelay", wallrunDelay);
         footsteps.PlayFootstep();
@@ -240,15 +383,22 @@ public class Wallrunning : MonoBehaviour
 
     private void HandleCameraLean()
     {
-        targetCameraLean = wallLeft && pm.wallrunning ? -cameraLeanAngle
-          : wallRight && pm.wallrunning ? cameraLeanAngle
-          : 0f;
+        // During transition, calculate lean based on current interpolated normal
+        float currentLean = 0f;
+        if (pm.wallrunning)
+        {
+            // Determine which side the wall is on based on the current normal
+            float dotRight = Vector3.Dot(orientation.right, -currentWallNormal);
+            currentLean = dotRight > 0 ? cameraLeanAngle : -cameraLeanAngle;
+        }
+
+        targetCameraLean = currentLean;
 
         Quaternion targetRot = Quaternion.Euler(0f, 0f, targetCameraLean);
         camera.localRotation = Quaternion.Slerp(
             camera.localRotation,
             targetRot,
             cameraLeanSpeed * Time.deltaTime
-            );
+        );
     }
 }
