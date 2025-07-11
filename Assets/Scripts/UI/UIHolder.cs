@@ -8,6 +8,7 @@ public class UIHolder : MonoBehaviour
     [SerializeField] private Image crosshair;
     [SerializeField] private Grappling grapplingScript;
     [SerializeField] private PlayerMovement playerMovement;
+    [SerializeField] private TimeManager timeManager;
 
     [Header("Crosshair Feedback")]
     [SerializeField] private float minScale = 0.5f;
@@ -20,8 +21,6 @@ public class UIHolder : MonoBehaviour
     [Header("Pull Bar Settings")]
     [SerializeField] private Image pullBarImage;
     [SerializeField] private float maxFillAmount = 0.5f; // 0.5 for semi-circle, 1.0 for full circle
-    [SerializeField] private Color fullPullColor = Color.cyan;
-    [SerializeField] private Color emptyPullColor = Color.red;
     [SerializeField] private float fadeSpeed = 3f; // How fast the pull bar fades in/out
     [SerializeField] private float hideDelayAfterFull = 2f; // Seconds to wait after full regen before hiding
 
@@ -30,6 +29,18 @@ public class UIHolder : MonoBehaviour
     private float hideTimer = 0f;
     private bool wasRegenerating = false;
     private bool wasPulling = false;
+
+    [Header("Time Slow Bar Settings")]
+    [SerializeField] private Image timeSlowBarImage;
+    [SerializeField] private float timeSlowMaxFillAmount = 0.5f; // 0.5 for semi-circle, 1.0 for full circle
+    [SerializeField] private float timeSlowFadeSpeed = 3f; // How fast the time slow bar fades in/out
+    [SerializeField] private float timeSlowHideDelayAfterFull = 2f; // Seconds to wait after full regen before hiding
+
+    private float timeSlowTargetAlpha = 0f;
+    private float timeSlowCurrentAlpha = 0f;
+    private float timeSlowHideTimer = 0f;
+    private bool wasTimeSlowRegenerating = false;
+    private bool wasTimeSlowing = false;
 
     private Vector3 originalScale;
     private Color originalColor;
@@ -47,6 +58,9 @@ public class UIHolder : MonoBehaviour
         if (playerMovement == null)
             playerMovement = FindObjectOfType<PlayerMovement>();
 
+        if (timeManager == null)
+            timeManager = FindObjectOfType<TimeManager>();
+
         if (crosshair != null)
         {
             originalScale = crosshair.transform.localScale;
@@ -62,6 +76,9 @@ public class UIHolder : MonoBehaviour
         // Initialize pull bar
         InitializePullBar();
 
+        // Initialize time slow bar
+        InitializeTimeSlowBar();
+
         // Validation
         if (crosshair == null)
             Debug.LogError("UIHolder: Crosshair Image not found! Make sure there's a UI Image named 'Crosshair' in your scene.");
@@ -73,12 +90,17 @@ public class UIHolder : MonoBehaviour
             Debug.LogError("UIHolder: Pull Bar Image not found! Please assign it in the inspector.");
         if (playerMovement == null)
             Debug.LogError("UIHolder: PlayerMovement component not found on player!");
+        if (timeSlowBarImage == null)
+            Debug.LogError("UIHolder: Time Slow Bar Image not found! Please assign it in the inspector.");
+        if (timeManager == null)
+            Debug.LogError("UIHolder: TimeManager component not found!");
     }
 
     void Update()
     {
         UpdateCrosshairFeedback();
         UpdatePullBarVisibility();
+        UpdateTimeSlowBarVisibility();
     }
 
     void InitializePullBar()
@@ -101,6 +123,26 @@ public class UIHolder : MonoBehaviour
         }
     }
 
+    void InitializeTimeSlowBar()
+    {
+        if (timeSlowBarImage == null)
+        {
+            // Try to find time slow bar image if not assigned
+            timeSlowBarImage = GameObject.Find("TimeSlowBarImage")?.GetComponent<Image>();
+        }
+
+        if (timeSlowBarImage != null)
+        {
+            // Set initial fill amount to max (full time slow budget)
+            timeSlowBarImage.fillAmount = timeSlowMaxFillAmount;
+
+            // Start with time slow bar invisible
+            timeSlowCurrentAlpha = 0f;
+            timeSlowTargetAlpha = 0f;
+            UpdateTimeSlowBarAlpha();
+        }
+    }
+
     public void SetPull(float currentPullTime)
     {
         if (pullBarImage != null && grapplingScript != null)
@@ -108,10 +150,16 @@ public class UIHolder : MonoBehaviour
             // Calculate fill amount based on current pull time vs max pull budget
             float fillPercentage = currentPullTime / grapplingScript.pullBudget;
             pullBarImage.fillAmount = fillPercentage * maxFillAmount;
+        }
+    }
 
-            // Optional: Change color based on pull amount
-            Color targetColor = Color.Lerp(emptyPullColor, fullPullColor, fillPercentage);
-            pullBarImage.color = new Color(targetColor.r, targetColor.g, targetColor.b, currentAlpha);
+    public void SetTimeSlowMeter(float currentTimeSlowMeter)
+    {
+        if (timeSlowBarImage != null && timeManager != null)
+        {
+            // Calculate fill amount based on current time slow meter vs max
+            float fillPercentage = timeManager.GetMeterPercent();
+            timeSlowBarImage.fillAmount = fillPercentage * timeSlowMaxFillAmount;
         }
     }
 
@@ -158,12 +206,67 @@ public class UIHolder : MonoBehaviour
         wasPulling = isCurrentlyPulling;
     }
 
+    void UpdateTimeSlowBarVisibility()
+    {
+        if (timeSlowBarImage == null || timeManager == null)
+            return;
+
+        bool isCurrentlySlowing = Input.GetKey(KeyCode.LeftShift) && timeManager.GetMeterPercent() > 0;
+        bool isCurrentlyRegeneratingTimeSlow = IsTimeSlowRegenerating();
+        bool isTimeSlowBarFull = Mathf.Approximately(1f, timeManager.GetMeterPercent());
+
+        // Check if we just finished regenerating
+        if (wasTimeSlowRegenerating && !isCurrentlyRegeneratingTimeSlow && isTimeSlowBarFull)
+        {
+            timeSlowHideTimer = timeSlowHideDelayAfterFull;
+        }
+
+        // Determine if time slow bar should be visible
+        // Show if: slowing time, regenerating, not full, or within hide delay after becoming full
+        bool shouldShow = isCurrentlySlowing || isCurrentlyRegeneratingTimeSlow || !isTimeSlowBarFull || timeSlowHideTimer > 0;
+
+        if (shouldShow)
+        {
+            timeSlowTargetAlpha = 1f;
+        }
+        else
+        {
+            timeSlowTargetAlpha = 0f;
+        }
+
+        // Update hide timer
+        if (timeSlowHideTimer > 0)
+        {
+            timeSlowHideTimer -= Time.deltaTime;
+        }
+
+        // Smooth alpha transition
+        timeSlowCurrentAlpha = Mathf.Lerp(timeSlowCurrentAlpha, timeSlowTargetAlpha, Time.deltaTime * timeSlowFadeSpeed);
+        UpdateTimeSlowBarAlpha();
+
+        // Update the time slow meter display
+        SetTimeSlowMeter(timeManager.GetMeterPercent());
+
+        // Store previous states
+        wasTimeSlowRegenerating = isCurrentlyRegeneratingTimeSlow;
+        wasTimeSlowing = isCurrentlySlowing;
+    }
+
     void UpdatePullBarAlpha()
     {
         if (pullBarImage != null)
         {
             Color currentColor = pullBarImage.color;
             pullBarImage.color = new Color(currentColor.r, currentColor.g, currentColor.b, currentAlpha);
+        }
+    }
+
+    void UpdateTimeSlowBarAlpha()
+    {
+        if (timeSlowBarImage != null)
+        {
+            Color currentColor = timeSlowBarImage.color;
+            timeSlowBarImage.color = new Color(currentColor.r, currentColor.g, currentColor.b, timeSlowCurrentAlpha);
         }
     }
 
@@ -177,6 +280,18 @@ public class UIHolder : MonoBehaviour
         bool canRegenerate = (playerMovement.grounded || playerMovement.wallrunning);
 
         return currentPull < grapplingScript.pullBudget && canRegenerate;
+    }
+
+    bool IsTimeSlowRegenerating()
+    {
+        if (timeManager == null)
+            return false;
+
+        // Check if time slow meter is less than max and not currently being used
+        float currentMeter = timeManager.GetMeterPercent();
+        bool notUsingTimeSlow = !Input.GetKey(KeyCode.LeftShift);
+
+        return currentMeter < 1f && notUsingTimeSlow;
     }
 
     float GetCurrentPullTime()

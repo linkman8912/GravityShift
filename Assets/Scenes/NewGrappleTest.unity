@@ -1825,7 +1825,7 @@ GameObject:
   - component: {fileID: 807781759}
   - component: {fileID: 807781758}
   m_Layer: 12
-  m_Name: Pullbar (1)
+  m_Name: TimeStopBar
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5710,6 +5710,11 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 8011499477745653491, guid: 8709ee89ddf351503919a485c1ea5e92,
+        type: 3}
+      propertyPath: timeSlowBarImage
+      value: 
+      objectReference: {fileID: 807781758}
     - target: {fileID: 8232813383111322811, guid: 8709ee89ddf351503919a485c1ea5e92,
         type: 3}
       propertyPath: m_AnchoredPosition.y
