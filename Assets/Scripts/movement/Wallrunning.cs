@@ -65,8 +65,8 @@ public class Wallrunning : MonoBehaviour
         footsteps = GetComponent<Footsteps>();
     }
 
-    void Update()
-    {
+    void Update() {
+        Debug.Log(rb.velocity.magnitude);
         StateMachine();
         HandleCameraLean();
 
@@ -318,8 +318,10 @@ public class Wallrunning : MonoBehaviour
         rb.useGravity = false;
         rb.velocity = new Vector3(redirectedVelocity.x, 0f, redirectedVelocity.z);
 
-        rb.AddForce(currentWallForward * wallRunForce, ForceMode.Force);
-        rb.AddForce(-currentWallNormal * wallRunForce / 2, ForceMode.Force);
+        if (rb.velocity.magnitude < 40) {
+          rb.AddForce(currentWallForward * wallRunForce, ForceMode.Force);
+          rb.AddForce(-currentWallNormal * wallRunForce / 2, ForceMode.Force);
+        }
     }
 
     void StopWallrun()
