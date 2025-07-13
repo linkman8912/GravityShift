@@ -4297,7 +4297,7 @@ Transform:
   m_GameObject: {fileID: 1563805793}
   serializedVersion: 2
   m_LocalRotation: {x: -0.5, y: -0.5, z: -0.5, w: 0.5}
-  m_LocalPosition: {x: 70.52, y: 24.6, z: 41.36}
+  m_LocalPosition: {x: 68.98, y: 24.6, z: 41.36}
   m_LocalScale: {x: 30, y: 1, z: 60}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5349,6 +5349,12 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 1956771085}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1946097461 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9025632964228545880, guid: 8709ee89ddf351503919a485c1ea5e92,
+    type: 3}
+  m_PrefabInstance: {fileID: 3247016036735311416}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1951434007
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5966,6 +5972,30 @@ Rigidbody:
     type: 3}
   m_PrefabInstance: {fileID: 3247016036735311416}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1753062027893627712
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1946097461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db210fc6ab9a3764a95a078ec9c7679e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  windSound: {fileID: 8300000, guid: 9a4ebc03bd1fe214da6429f5a8475eef, type: 3}
+  enablePitchEffect: 1
+  minSpeedThreshold: 15
+  maxSpeedThreshold: 50
+  minVolume: 0
+  maxVolume: 0.7
+  volumeFadeSpeed: 2
+  basePitch: 1
+  minPitch: 0.3
+  maxPitch: 1.2
+  pitchFadeSpeed: 3
+  speedSmoothingFactor: 5
 --- !u!1001 &2820162800852832755
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6202,6 +6232,11 @@ PrefabInstance:
       propertyPath: wallCoyoteTime
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4343931277897646851, guid: 8709ee89ddf351503919a485c1ea5e92,
+        type: 3}
+      propertyPath: cameraLeanAngle
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 4440214815978744248, guid: 8709ee89ddf351503919a485c1ea5e92,
         type: 3}
       propertyPath: m_Enabled
@@ -6269,7 +6304,11 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 807781757}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 9025632964228545880, guid: 8709ee89ddf351503919a485c1ea5e92,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1753062027893627712}
   m_SourcePrefab: {fileID: 100100000, guid: 8709ee89ddf351503919a485c1ea5e92, type: 3}
 --- !u!224 &3247016036735311417 stripped
 RectTransform:
