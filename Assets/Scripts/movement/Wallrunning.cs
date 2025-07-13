@@ -66,7 +66,6 @@ public class Wallrunning : MonoBehaviour
     }
 
     void Update() {
-        Debug.Log(rb.velocity.magnitude);
         StateMachine();
         HandleCameraLean();
 
