@@ -3,8 +3,7 @@
 using System;
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour
-{
+public class PlayerMovement : MonoBehaviour {
 
     [Header("Assignables")]
     public Transform playerCam;
@@ -40,6 +39,8 @@ public class PlayerMovement : MonoBehaviour
     public float slideCounterMovement = 0;
     public bool sliding = false;
     private float slideStartSpeed;
+    [SerializeField] private float slideLeniencyHeight = 50;
+    private bool slideBuffered;
 
     [Header("Jumping")]
     private bool readyToJump = true;
@@ -124,12 +125,23 @@ public class PlayerMovement : MonoBehaviour
         jumping = Input.GetButton("Jump");
         doubleJumping = Input.GetButtonDown("Jump");
         crouching = (Input.GetKey(KeyCode.LeftControl) && grounded);
-
         //Crouching
-        if (Input.GetKeyDown(KeyCode.LeftControl) && grounded && !slamming)
+        if ((Input.GetKeyDown(KeyCode.LeftControl) || slideBuffered) && grounded && !slamming) {
             StartCrouch();
+            StopSlideBuffer();
+        }
         if (Input.GetKeyDown(KeyCode.LeftControl) && !grounded && !slamming)
-            StartSlam();
+            if (slideBuffered) {
+              if (!CheckSlideHeight()) {
+                StopSlideBuffer();
+              }
+            }
+            else if (CheckSlideHeight()) {
+              BufferSlide(); 
+            }
+            else {
+              StartSlam();
+            }
         if (Input.GetKeyUp(KeyCode.LeftControl))
             StopCrouch();
     }
@@ -388,5 +400,17 @@ public class PlayerMovement : MonoBehaviour
 
         yaw += mouseX;
         orientation.rotation = Quaternion.Euler(0f, yaw, 0f);
+    }
+
+    bool CheckSlideHeight() {
+      return Physics.Raycast(transform.position, Vector3.down, slideLeniencyHeight, whatIsGround);
+    }
+
+    void BufferSlide() {
+      slideBuffered = true;
+    }
+
+    void StopSlideBuffer() {
+      slideBuffered = false;
     }
 }
