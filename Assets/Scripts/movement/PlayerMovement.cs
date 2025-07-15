@@ -12,6 +12,7 @@ public class PlayerMovement : MonoBehaviour {
 
     //Other
     private Rigidbody rb;
+    private Wallrunning wr;
 
     [Header("Rotation and look")]
     private float xRotation;
@@ -39,9 +40,11 @@ public class PlayerMovement : MonoBehaviour {
     public float slideCounterMovement = 0;
     public bool sliding = false;
     private Vector3 slideStartSpeed;
-    [SerializeField] private float slideLeniencyHeight = 1;
+    [SerializeField] private float slideLeniencyHeight = 1f;
     private bool slideBuffered;
     [SerializeField] private float slideDecay = 0.99f;
+    [SerializeField] private float slideLeanDegrees = 20f;
+    [SerializeField] private float slideCameraLean = 15f;
 
     [Header("Jumping")]
     private bool readyToJump = true;
@@ -73,6 +76,7 @@ public class PlayerMovement : MonoBehaviour {
     private Footsteps footsteps;
 
     void Awake() {
+        wr = GetComponent<Wallrunning>();
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
@@ -202,6 +206,12 @@ public class PlayerMovement : MonoBehaviour {
             rb.AddForce(Vector3.down * Time.deltaTime * 3000);
             //return;
         }
+        // Movement while sliding
+        if (sliding) {
+          //rb.velocity = slideStartSpeed * orientation.forward;
+          rb.velocity = (Quaternion.AngleAxis(slideLeanDegrees * x, Vector3.up) * slideStartSpeed.normalized) * (slideStartSpeed.magnitude * slideDecay);
+          wr.LeanCamera(slideCameraLean * -x);
+        }
 
         //If speed is larger than maxspeed, cancel out the input so you don't go over max speed
         if (x > 0 && xMag > maxSpeed) x = 0;
@@ -220,13 +230,6 @@ public class PlayerMovement : MonoBehaviour {
 
         if (grounded && FindVelRelativeToLook() != new Vector2(0, 0))
             footsteps.PlayFootstep();
-
-        // Movement while sliding
-        if (sliding) {
-          multiplierV = 0f;
-          //rb.velocity = slideStartSpeed * orientation.forward;
-          rb.velocity = slideStartSpeed.normalized * (slideStartSpeed.magnitude * slideDecay);
-        }
 
         if (slamming && grounded) StopSlam();
         else if (slamming) {
