@@ -373,6 +373,7 @@ public class PlayerMovement : MonoBehaviour {
         slamStartingHeight = transform.position.y;
         slamming = true;
         StopCrouch();
+        gp.StopGrapple();
     }
 
     void StopSlam() {
