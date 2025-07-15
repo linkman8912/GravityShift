@@ -27,7 +27,7 @@ public class PlayerMovement : MonoBehaviour {
     public float wallrunSpeed = 200f;
 
     public float counterMovement = 0.175f;
-    [SerializeField] private float counterMovementTime = 1f;
+    [SerializeField] private float counterMovementTime = 0.25f;
     private float counterMovementTimer = 0f;
     private bool airLastFrame = false;
     private float threshold = 0.01f;
