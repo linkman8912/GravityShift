@@ -38,9 +38,10 @@ public class PlayerMovement : MonoBehaviour {
     public float slideForce = 9f;
     public float slideCounterMovement = 0;
     public bool sliding = false;
-    private float slideStartSpeed;
-    [SerializeField] private float slideLeniencyHeight = 50;
+    private Vector3 slideStartSpeed;
+    [SerializeField] private float slideLeniencyHeight = 1;
     private bool slideBuffered;
+    [SerializeField] private float slideDecay = 0.99f;
 
     [Header("Jumping")]
     private bool readyToJump = true;
@@ -157,7 +158,8 @@ public class PlayerMovement : MonoBehaviour {
 
     void StartSlide() {
       sliding = true;
-      slideStartSpeed = rb.velocity.magnitude;
+      //slideStartSpeed = rb.velocity.magnitude;
+      slideStartSpeed = rb.velocity;
     }
 
     void StopCrouch() {
@@ -173,7 +175,6 @@ public class PlayerMovement : MonoBehaviour {
     void Movement() {
         //Extra gravity
         //rb.AddForce(Vector3.down * Time.deltaTime * 60);
-        if (sliding) Debug.Log("sliding in movement");
         //Find actual velocity relative to where player is looking
         Vector2 mag = FindVelRelativeToLook();
         float xMag = mag.x, yMag = mag.y;
@@ -222,9 +223,9 @@ public class PlayerMovement : MonoBehaviour {
 
         // Movement while sliding
         if (sliding) {
-          Debug.Log("sliding movement");
           multiplierV = 0f;
-          rb.velocity = slideStartSpeed * orientation.forward;
+          //rb.velocity = slideStartSpeed * orientation.forward;
+          rb.velocity = slideStartSpeed.normalized * (slideStartSpeed.magnitude * slideDecay);
         }
 
         if (slamming && grounded) StopSlam();
