@@ -7,10 +7,11 @@ public class Wallrunning : MonoBehaviour
     [Header("Wallrunning")]
     [SerializeField] private LayerMask whatIsWall;
     private LayerMask whatIsGround;
-    [SerializeField] private float wallRunForce = 3;
+    [SerializeField] private float wallRunForce = 3.5f;
     [SerializeField] private float maxWallrunTime = 1.5f;
     [SerializeField] private float wallMomentumAngle = 40;
     [SerializeField] private float wallrunDelay = 0.5f;
+    [SerializeField] private float maxWallrunSpeed = 50f;
     private float targetCameraLean;
     private float wallrunTimer;
     private bool readyToWallrun = true;
@@ -317,7 +318,7 @@ public class Wallrunning : MonoBehaviour
         rb.useGravity = false;
         rb.velocity = new Vector3(redirectedVelocity.x, 0f, redirectedVelocity.z);
 
-        if (rb.velocity.magnitude < 40) {
+        if (rb.velocity.magnitude < maxWallrunSpeed) {
           rb.AddForce(currentWallForward * wallRunForce, ForceMode.Force);
           rb.AddForce(-currentWallNormal * wallRunForce / 2, ForceMode.Force);
         }

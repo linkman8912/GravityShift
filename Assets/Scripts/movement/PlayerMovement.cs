@@ -54,6 +54,7 @@ public class PlayerMovement : MonoBehaviour {
 
     [Header("Ground Slam")]
     [SerializeField] private float slamVelocity = 100f;
+    [SerializeField] private float slamGrappleVelocity = 70f;
     private bool slamming = false;
     float slamStartingHeight;
     [SerializeField] float slamJumpTime = 0.5f;
@@ -98,6 +99,7 @@ public class PlayerMovement : MonoBehaviour {
     }
 
     void Update() {
+        Debug.Log(rb.velocity.magnitude);
         if (counterMovementTimer > 0)
           counterMovementTimer -= Time.deltaTime;
         if (counterMovementTimer < 0) 
@@ -236,7 +238,9 @@ public class PlayerMovement : MonoBehaviour {
             rb.velocity = new Vector3(0f, -slamVelocity, 0f);
         }
 
-        if (slamming && grappling) StopSlam();
+        if (slamming && grappling) {
+          StopSlam();
+        }
 
         if (!wallrunning && !slamming && !sliding) {
             //Apply forces to move player
@@ -377,10 +381,13 @@ public class PlayerMovement : MonoBehaviour {
     }
 
     void StopSlam() {
-        if (slamLandEffect != null)
+        if (slamLandEffect != null && grounded)
             Instantiate(slamLandEffect, transform.position, Quaternion.identity);
         slamming = false;
         slamJumpTimer = slamJumpTime;
+        if (grappling) {
+          rb.velocity = new Vector3(0f, -slamGrappleVelocity, 0f);
+        }
     }
 
 
