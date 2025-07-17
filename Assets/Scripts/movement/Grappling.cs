@@ -23,7 +23,6 @@ public class Grappling : MonoBehaviour
     public Transform gunTipBase;
     [SerializeField] private UIHolder uiHolder;
 
-
     // ——— Orb shooter reference ———
     [Tooltip("Drag your GravityOrbShooter here, or it'll auto-find at Start")]
     public GravityOrbShooter orb;
@@ -33,11 +32,22 @@ public class Grappling : MonoBehaviour
     private float orbReleaseTime = -Mathf.Infinity;
     private const float grappleBuffer = 0.1f;  // seconds after release
 
+    // ——— Visual Settings ———
+    [Header("Visual Settings")]
+    [SerializeField] private bool use3DVisualizer = true; // Toggle between 2D LineRenderer and 3D visualizer
+
     void Start()
     {
         pullBudgetTime = pullBudget;
         lr = GetComponent<LineRenderer>();
         pm = player.GetComponent<PlayerMovement>();
+
+        // Disable LineRenderer if using 3D visualizer
+        if (use3DVisualizer && lr != null)
+        {
+            lr.enabled = false;
+            lr.positionCount = 0; // Also clear any positions
+        }
 
         // Make sure orb reference is set
         if (orb == null)
@@ -138,13 +148,17 @@ public class Grappling : MonoBehaviour
             joint.connectedAnchor = grapplePoint;
             float dist = Vector3.Distance(player.position, grapplePoint);
             joint.maxDistance = dist * 0.8f;
-            //joint.minDistance = dist * 0.25f;
             joint.minDistance = 0;
             joint.spring = 4.5f;
             joint.damper = 7f;
             joint.massScale = 4.5f;
-            //joint.tolerance = 10;
-            lr.positionCount = 2;
+
+            // Only set LineRenderer position count if not using 3D visualizer
+            if (!use3DVisualizer && lr != null)
+            {
+                lr.positionCount = 2;
+                lr.enabled = true; // Make sure it's enabled when we want to use it
+            }
 
             pm.secondJump = true;
             pm.grappling = true;
@@ -157,17 +171,24 @@ public class Grappling : MonoBehaviour
 
     public void StopGrapple()
     {
-        lr.positionCount = 0;
+        // Only set LineRenderer position count if not using 3D visualizer
+        if (!use3DVisualizer && lr != null)
+        {
+            lr.positionCount = 0;
+        }
+
         Destroy(joint);
         pm.grappling = false;
     }
 
     void DrawRope()
     {
+        // Skip LineRenderer drawing if using 3D visualizer
+        if (use3DVisualizer) return;
+
         if (!joint) return;
         lr.SetPosition(0, gunTipBase.position);
         lr.SetPosition(1, grapplePoint);
-
     }
 
     public bool isGrappling()
