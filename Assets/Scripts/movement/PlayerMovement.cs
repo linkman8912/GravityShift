@@ -99,7 +99,7 @@ public class PlayerMovement : MonoBehaviour {
     }
 
     void Update() {
-        Debug.Log(rb.velocity.magnitude);
+        //Debug.Log(rb.velocity.magnitude);
         if (counterMovementTimer > 0)
           counterMovementTimer -= Time.deltaTime;
         if (counterMovementTimer < 0) 

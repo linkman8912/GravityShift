@@ -169,18 +169,25 @@ public class Grappling : MonoBehaviour
         }
     }
 
-    public void StopGrapple() {
-        lr.positionCount = 0;
+    public void StopGrapple()
+    {
+        // Only set LineRenderer position count if not using 3D visualizer
+        if (!use3DVisualizer && lr != null)
+        {
+            lr.positionCount = 0;
+        }
+
         Destroy(joint);
         pm.grappling = false;
     }
 
     void DrawRope()
     {
-        // Skip LineRenderer drawing if using 3D visualizer
-        if (use3DVisualizer) return;
+        // Skip LineRenderer drawing if using 3D visualizer OR if LineRenderer is disabled
+        if (use3DVisualizer || lr == null || !lr.enabled) return;
 
-        if (!joint) return;
+        if (!joint || gunTipBase == null) return;
+
         lr.SetPosition(0, gunTipBase.position);
         lr.SetPosition(1, grapplePoint);
     }

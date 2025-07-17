@@ -38,8 +38,10 @@ public class GrappleVisualizer : MonoBehaviour
     // Animation state
     private bool isShootingHook = false;
     private bool isRetractingHook = false;
+    private bool hookAttached = false; // New flag to track if hook is attached
     private Vector3 targetGrapplePoint;
     private Vector3 currentHookPosition;
+    private Vector3 attachedHookPosition; // Store the final attached position
     private Coroutine shootCoroutine;
     private Coroutine retractCoroutine;
     private Coroutine ropeUpdateCoroutine;
@@ -51,10 +53,23 @@ public class GrappleVisualizer : MonoBehaviour
             grappling = GetComponent<Grappling>();
 
         if (gunTip == null)
-            gunTip = grappling.gunTip;
+            gunTip = grappling != null ? grappling.gunTip : null;
 
         if (player == null)
-            player = grappling.player;
+            player = grappling != null ? grappling.player : null;
+
+        // Debug check for missing references
+        if (gunTip == null)
+        {
+            Debug.LogError("GrappleVisualizer: gunTip is null! Make sure it's assigned in the Grappling component.");
+            return;
+        }
+
+        if (player == null)
+        {
+            Debug.LogError("GrappleVisualizer: player is null! Make sure it's assigned in the Grappling component.");
+            return;
+        }
 
         CreateVisualComponents();
         HideGrappleVisuals();
@@ -157,6 +172,7 @@ public class GrappleVisualizer : MonoBehaviour
         // Reset animation state
         isShootingHook = false;
         isRetractingHook = false;
+        hookAttached = false; // Reset attachment state
 
         targetGrapplePoint = grappling.getGrapplePoint();
         currentHookPosition = gunTip.position;
@@ -176,6 +192,11 @@ public class GrappleVisualizer : MonoBehaviour
 
         // Reset animation state
         isShootingHook = false;
+        hookAttached = false; // Hook is no longer attached
+
+        // Use the stored attached position for retraction starting point
+        if (hookObject != null)
+            currentHookPosition = hookObject.transform.position;
 
         retractCoroutine = StartCoroutine(RetractHookAnimation());
     }
@@ -202,9 +223,18 @@ public class GrappleVisualizer : MonoBehaviour
             yield return null;
         }
 
-        // Snap to final position
-        currentHookPosition = targetGrapplePoint;
-        UpdateHookPosition();
+        // Snap to final position and mark as attached
+        attachedHookPosition = grappling.getGrapplePoint();
+        currentHookPosition = attachedHookPosition;
+        hookObject.transform.position = attachedHookPosition;
+        hookAttached = true; // Hook is now attached and won't move again
+
+        // Set initial rotation for the hook
+        Vector3 direction = (gunTip.position - attachedHookPosition).normalized;
+        if (direction != Vector3.zero)
+        {
+            hookObject.transform.rotation = Quaternion.LookRotation(direction);
+        }
 
         // Impact effect
         StartCoroutine(ImpactEffect());
@@ -269,28 +299,99 @@ public class GrappleVisualizer : MonoBehaviour
         while (grappling.isGrappling())
         {
             UpdateRopeVisual();
+
+            // Only update hook rotation when attached
+            if (hookAttached && hookObject != null && gunTip != null)
+            {
+                // Keep the hook at the attached position
+                hookObject.transform.position = attachedHookPosition;
+
+                // Update rotation to face the gun
+                Vector3 direction = (gunTip.position - attachedHookPosition).normalized;
+                if (direction != Vector3.zero)
+                {
+                    hookObject.transform.rotation = Quaternion.LookRotation(direction);
+                }
+            }
             yield return null;
         }
     }
 
     void UpdateHookPosition()
     {
-        hookObject.transform.position = currentHookPosition;
-
-        // Orient hook towards gun tip
-        Vector3 direction = (gunTip.position - currentHookPosition).normalized;
-        if (direction != Vector3.zero)
+        if (hookObject != null && gunTip != null)
         {
-            hookObject.transform.rotation = Quaternion.LookRotation(direction);
+            // Only update position during shooting/retracting animations
+            if (!hookAttached)
+            {
+                hookObject.transform.position = currentHookPosition;
+
+                // Orient hook towards gun tip
+                Vector3 direction = (gunTip.position - currentHookPosition).normalized;
+                if (direction != Vector3.zero)
+                {
+                    hookObject.transform.rotation = Quaternion.LookRotation(direction);
+                }
+            }
+            // If attached, position updates are handled in ContinuousRopeUpdate
         }
     }
 
     void UpdateRopeVisual()
     {
-        if (ropeRenderer != null)
+        if (ropeRenderer != null && gunTip != null)
         {
-            ropeRenderer.SetPosition(0, gunTip.position);
-            ropeRenderer.SetPosition(1, currentHookPosition);
+            if (enableRopeSag)
+            {
+                UpdateRopeWithSag();
+            }
+            else
+            {
+                // Simple straight line
+                ropeRenderer.positionCount = 2;
+                ropeRenderer.SetPosition(0, gunTip.position);
+                ropeRenderer.SetPosition(1, hookAttached ? attachedHookPosition : currentHookPosition);
+            }
+        }
+    }
+
+    void UpdateRopeWithSag()
+    {
+        if (gunTip == null) return;
+
+        Vector3 startPos = gunTip.position;
+        Vector3 endPos = hookAttached ? attachedHookPosition : currentHookPosition;
+
+        // Calculate tension based on distance vs original grapple distance
+        float currentDistance = Vector3.Distance(startPos, endPos);
+        float originalDistance = Vector3.Distance(gunTip.position, targetGrapplePoint);
+        float tension = Mathf.Clamp(currentDistance / originalDistance, minTension, maxTension);
+
+        // Calculate sag amount (inverse of tension)
+        float sagAmount = (1f - tension) * sagIntensity;
+
+        // Set rope segment count
+        ropeRenderer.positionCount = ropeSegments + 1;
+
+        // Calculate rope points with sag
+        for (int i = 0; i <= ropeSegments; i++)
+        {
+            float t = (float)i / ropeSegments;
+
+            // Linear interpolation between start and end
+            Vector3 point = Vector3.Lerp(startPos, endPos, t);
+
+            // Add sag using a parabolic curve
+            float sagCurve = 4f * t * (1f - t); // Parabola that peaks at t=0.5
+            Vector3 sagOffset = Vector3.down * sagCurve * sagAmount;
+
+            // Apply gravity direction (in case player is on walls/ceiling)
+            Vector3 gravityDirection = Physics.gravity.normalized;
+            if (gravityDirection == Vector3.zero) gravityDirection = Vector3.down;
+
+            point += gravityDirection * sagCurve * sagAmount;
+
+            ropeRenderer.SetPosition(i, point);
         }
     }
 
