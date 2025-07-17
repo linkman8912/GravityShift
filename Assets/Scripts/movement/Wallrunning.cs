@@ -7,10 +7,11 @@ public class Wallrunning : MonoBehaviour
     [Header("Wallrunning")]
     [SerializeField] private LayerMask whatIsWall;
     private LayerMask whatIsGround;
-    [SerializeField] private float wallRunForce = 3;
+    [SerializeField] private float wallRunForce = 3.5f;
     [SerializeField] private float maxWallrunTime = 1.5f;
     [SerializeField] private float wallMomentumAngle = 40;
     [SerializeField] private float wallrunDelay = 0.5f;
+    [SerializeField] private float maxWallrunSpeed = 50f;
     private float targetCameraLean;
     private float wallrunTimer;
     private bool readyToWallrun = true;
@@ -317,7 +318,7 @@ public class Wallrunning : MonoBehaviour
         rb.useGravity = false;
         rb.velocity = new Vector3(redirectedVelocity.x, 0f, redirectedVelocity.z);
 
-        if (rb.velocity.magnitude < 40) {
+        if (rb.velocity.magnitude < maxWallrunSpeed) {
           rb.AddForce(currentWallForward * wallRunForce, ForceMode.Force);
           rb.AddForce(-currentWallNormal * wallRunForce / 2, ForceMode.Force);
         }
@@ -382,12 +383,11 @@ public class Wallrunning : MonoBehaviour
         readyToWallrun = true;
     }
 
-    private void HandleCameraLean()
-    {
+    private void HandleCameraLean() {
+        if (pm.sliding) return;
         // During transition, calculate lean based on current interpolated normal
         float currentLean = 0f;
-        if (pm.wallrunning)
-        {
+        if (pm.wallrunning) {
             // Determine which side the wall is on based on the current normal
             float dotRight = Vector3.Dot(orientation.right, -currentWallNormal);
             currentLean = dotRight > 0 ? cameraLeanAngle : -cameraLeanAngle;
@@ -395,11 +395,20 @@ public class Wallrunning : MonoBehaviour
 
         targetCameraLean = currentLean;
 
-        Quaternion targetRot = Quaternion.Euler(0f, 0f, targetCameraLean);
+        /*Quaternion targetRot = Quaternion.Euler(0f, 0f, targetCameraLean);
         camera.localRotation = Quaternion.Slerp(
             camera.localRotation,
             targetRot,
             cameraLeanSpeed * Time.deltaTime
-        );
+        );*/
+        LeanCamera(targetCameraLean);
+    }
+    public void LeanCamera(float cameraLean) {
+      Quaternion targetRot = Quaternion.Euler(0f, 0f, cameraLean);
+      camera.localRotation = Quaternion.Slerp(
+          camera.localRotation,
+          targetRot,
+          cameraLeanSpeed * Time.deltaTime
+          );
     }
 }

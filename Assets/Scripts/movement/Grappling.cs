@@ -169,14 +169,8 @@ public class Grappling : MonoBehaviour
         }
     }
 
-    public void StopGrapple()
-    {
-        // Only set LineRenderer position count if not using 3D visualizer
-        if (!use3DVisualizer && lr != null)
-        {
-            lr.positionCount = 0;
-        }
-
+    public void StopGrapple() {
+        lr.positionCount = 0;
         Destroy(joint);
         pm.grappling = false;
     }
