@@ -40,7 +40,8 @@ public class Wallrunning : MonoBehaviour
     private float verticalInput;
 
     [Header("Detection")]
-    [SerializeField] private float wallCheckDistance = 2;
+    [SerializeField] private float wallCheckDistance = 2.5f;
+    [SerializeField] private float wallCheckAngle = 20f;
     [SerializeField] private float minJumpHeight = 1;
     private RaycastHit leftWallHit;
     private RaycastHit rightWallHit;
@@ -104,8 +105,8 @@ public class Wallrunning : MonoBehaviour
 
     private void CheckForWall()
     {
-        wallRight = Physics.Raycast(transform.position, orientation.right, out rightWallHit, wallCheckDistance, whatIsWall);
-        wallLeft = Physics.Raycast(transform.position, -orientation.right, out leftWallHit, wallCheckDistance, whatIsWall);
+        wallRight = Physics.Raycast(transform.position, (Quaternion.AngleAxis(-wallCheckAngle, Vector3.up) * orientation.right), out rightWallHit, wallCheckDistance, whatIsWall);
+        wallLeft = Physics.Raycast(transform.position, (Quaternion.AngleAxis(wallCheckAngle, Vector3.up) * -orientation.right), out leftWallHit, wallCheckDistance, whatIsWall);
     }
 
     private bool CheckForWallTransition()
