@@ -211,7 +211,12 @@ public class PlayerMovement : MonoBehaviour {
         // Movement while sliding
         if (sliding) {
           //rb.velocity = slideStartSpeed * orientation.forward;
-          rb.velocity = (Quaternion.AngleAxis(slideLeanDegrees * x, Vector3.up) * slideStartSpeed.normalized) * (slideStartSpeed.magnitude * slideDecay);
+          if (!grappling) {
+            rb.velocity = (Quaternion.AngleAxis(slideLeanDegrees * x, Vector3.up) * slideStartSpeed.normalized) * (slideStartSpeed.magnitude * slideDecay);
+          }
+          else {
+            rb.velocity = rb.velocity.normalized * (slideStartSpeed.magnitude * slideDecay);
+          }
           wr.LeanCamera(slideCameraLean * -x);
         }
 
